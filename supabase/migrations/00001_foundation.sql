@@ -20,9 +20,10 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Helper function: returns firm_ids for the current authenticated user.
--- SECURITY DEFINER bypasses RLS so other policies can check firm membership
--- without causing infinite recursion on firm_users.
+-- Helper: returns firm_ids for the current authenticated user.
+-- SECURITY DEFINER bypasses RLS so the firm_users SELECT policy can check
+-- membership without infinite recursion (firm_users referencing itself).
+-- Other tables use inline EXISTS subqueries for better query optimization.
 CREATE OR REPLACE FUNCTION get_my_firm_ids()
 RETURNS SETOF UUID
 LANGUAGE sql
@@ -196,7 +197,7 @@ BEGIN
   WHERE firm_id = p_firm_id
   ORDER BY created_at DESC, id DESC
   LIMIT 1
-  FOR UPDATE;
+  FOR UPDATE;  -- lock to prevent concurrent chain breaks
 
   -- Genesis: first entry in a firm's chain
   IF v_prev_hash IS NULL THEN
@@ -233,6 +234,7 @@ END;
 $$;
 
 -- Only service_role and postgres can call this function.
+-- Authenticated users trigger audit entries via server actions, never directly.
 REVOKE EXECUTE ON FUNCTION insert_audit_log FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION insert_audit_log FROM authenticated;
 REVOKE EXECUTE ON FUNCTION insert_audit_log FROM anon;
@@ -241,15 +243,26 @@ REVOKE EXECUTE ON FUNCTION insert_audit_log FROM anon;
 -- 6. Row Level Security Policies
 -- =============================================================================
 
--- All SELECT policies use get_my_firm_ids() (SECURITY DEFINER) to avoid
--- infinite recursion on firm_users self-referencing RLS.
+-- RLS strategy:
+-- - firm_users uses get_my_firm_ids() (SECURITY DEFINER) to avoid infinite
+--   recursion from self-referencing its own RLS policy.
+-- - All other tables use inline EXISTS subqueries against firm_users, which
+--   Postgres can optimize as joins. These don't recurse because firm_users'
+--   own policy is resolved via get_my_firm_ids().
 
 -- firms ---
 ALTER TABLE firms ENABLE ROW LEVEL SECURITY;
 
+-- Users can see firms they belong to
 CREATE POLICY "Users can view own firms"
   ON firms FOR SELECT
-  USING (id IN (SELECT get_my_firm_ids()));
+  USING (
+    EXISTS (
+      SELECT 1 FROM firm_users
+      WHERE firm_users.firm_id = firms.id
+        AND firm_users.user_id = auth.uid()
+    )
+  );
 
 -- No INSERT/UPDATE/DELETE policies for authenticated.
 -- Firm creation/management is service_role only.
@@ -263,9 +276,10 @@ CREATE POLICY "Users can view own profile and firm colleagues"
   USING (
     id = auth.uid()
     OR EXISTS (
-      SELECT 1 FROM firm_users
-      WHERE firm_users.user_id = users.id
-        AND firm_users.firm_id IN (SELECT get_my_firm_ids())
+      SELECT 1 FROM firm_users fu1
+      INNER JOIN firm_users fu2 ON fu1.firm_id = fu2.firm_id
+      WHERE fu1.user_id = auth.uid()
+        AND fu2.user_id = users.id
     )
   );
 
@@ -281,7 +295,9 @@ CREATE POLICY "Users can update own profile"
 -- firm_users ---
 ALTER TABLE firm_users ENABLE ROW LEVEL SECURITY;
 
--- Uses get_my_firm_ids() directly to break self-referencing recursion
+-- Uses get_my_firm_ids() (SECURITY DEFINER) to break self-referencing recursion.
+-- An inline EXISTS on firm_users from firm_users' own policy would cause
+-- infinite recursion because the inner query triggers the same policy.
 CREATE POLICY "Users can view firm memberships"
   ON firm_users FOR SELECT
   USING (firm_id IN (SELECT get_my_firm_ids()));
@@ -292,9 +308,16 @@ CREATE POLICY "Users can view firm memberships"
 -- firm_config ---
 ALTER TABLE firm_config ENABLE ROW LEVEL SECURITY;
 
+-- Users can see config for their firm(s)
 CREATE POLICY "Users can view own firm config"
   ON firm_config FOR SELECT
-  USING (firm_id IN (SELECT get_my_firm_ids()));
+  USING (
+    EXISTS (
+      SELECT 1 FROM firm_users
+      WHERE firm_users.firm_id = firm_config.firm_id
+        AND firm_users.user_id = auth.uid()
+    )
+  );
 
 -- Owners can update their firm's config
 CREATE POLICY "Owners can update firm config"
@@ -321,9 +344,16 @@ CREATE POLICY "Owners can update firm config"
 -- audit_log ---
 ALTER TABLE audit_log ENABLE ROW LEVEL SECURITY;
 
+-- Users can read audit logs for their firm(s)
 CREATE POLICY "Users can view own firm audit log"
   ON audit_log FOR SELECT
-  USING (firm_id IN (SELECT get_my_firm_ids()));
+  USING (
+    EXISTS (
+      SELECT 1 FROM firm_users
+      WHERE firm_users.firm_id = audit_log.firm_id
+        AND firm_users.user_id = auth.uid()
+    )
+  );
 
 -- No INSERT policy — inserts go through insert_audit_log() which is SECURITY DEFINER.
 -- No UPDATE/DELETE policies — triggers prevent these operations for ALL roles.
