@@ -20,20 +20,6 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Helper: returns firm_ids for the current authenticated user.
--- SECURITY DEFINER bypasses RLS so the firm_users SELECT policy can check
--- membership without infinite recursion (firm_users referencing itself).
--- Other tables use inline EXISTS subqueries for better query optimization.
-CREATE OR REPLACE FUNCTION get_my_firm_ids()
-RETURNS SETOF UUID
-LANGUAGE sql
-SECURITY DEFINER
-SET search_path = public
-STABLE
-AS $$
-  SELECT firm_id FROM firm_users WHERE user_id = auth.uid();
-$$;
-
 -- =============================================================================
 -- 2. Tables
 -- =============================================================================
@@ -240,7 +226,25 @@ REVOKE EXECUTE ON FUNCTION insert_audit_log FROM authenticated;
 REVOKE EXECUTE ON FUNCTION insert_audit_log FROM anon;
 
 -- =============================================================================
--- 6. Row Level Security Policies
+-- 6. RLS Helper (must be after firm_users table — LANGUAGE sql validates at creation)
+-- =============================================================================
+
+-- Helper: returns firm_ids for the current authenticated user.
+-- SECURITY DEFINER bypasses RLS so the firm_users SELECT policy can check
+-- membership without infinite recursion (firm_users referencing itself).
+-- Other tables use inline EXISTS subqueries for better query optimization.
+CREATE OR REPLACE FUNCTION get_my_firm_ids()
+RETURNS SETOF UUID
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+STABLE
+AS $$
+  SELECT firm_id FROM firm_users WHERE user_id = auth.uid();
+$$;
+
+-- =============================================================================
+-- 7. Row Level Security Policies
 -- =============================================================================
 
 -- RLS strategy:
