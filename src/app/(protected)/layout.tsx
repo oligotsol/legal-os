@@ -23,25 +23,28 @@ export default async function ProtectedLayout({
     redirect("/login");
   }
 
-  // Check if user has a role that requires MFA enrollment
-  const { data: memberships } = await supabase
-    .from("firm_users")
-    .select("role")
-    .eq("user_id", user.id);
-
-  const requiresMfa = memberships?.some((m) =>
-    MFA_REQUIRED_ROLES.includes(m.role as UserRole)
-  );
-
-  if (requiresMfa) {
-    const { data: aal } =
-      await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-
-    // User needs MFA but hasn't enrolled any factors yet
-    if (aal && aal.nextLevel === "aal1") {
-      redirect("/mfa");
-    }
-  }
+  // TODO: Re-enable MFA enforcement once Supabase Site URL is configured.
+  // MFA enrollment requires a valid Site URL in Supabase Auth config.
+  // See: Supabase Dashboard → Authentication → URL Configuration
+  //
+  // const { data: memberships } = await supabase
+  //   .from("firm_users")
+  //   .select("role")
+  //   .eq("user_id", user.id);
+  //
+  // const requiresMfa = memberships?.some((m) =>
+  //   MFA_REQUIRED_ROLES.includes(m.role as UserRole)
+  // );
+  //
+  // if (requiresMfa) {
+  //   const { data: aal } =
+  //     await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+  //
+  //   // User needs MFA but hasn't enrolled any factors yet
+  //   if (aal && aal.nextLevel === "aal1") {
+  //     redirect("/mfa");
+  //   }
+  // }
 
   return <>{children}</>;
 }
