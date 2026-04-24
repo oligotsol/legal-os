@@ -1,7 +1,6 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { headers } from "next/headers";
 
 export async function login(formData: FormData) {
   const supabase = await createClient();
@@ -11,8 +10,7 @@ export async function login(formData: FormData) {
     return { error: "Email is required" };
   }
 
-  const headerStore = await headers();
-  const origin = headerStore.get("origin") ?? process.env.NEXT_PUBLIC_APP_URL;
+  const origin = process.env.NEXT_PUBLIC_APP_URL;
 
   const { error } = await supabase.auth.signInWithOtp({
     email,
