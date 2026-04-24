@@ -54,24 +54,24 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // MFA enforcement: if user has TOTP enrolled but hasn't verified this
-  // session, redirect to /mfa for verification. Enrollment enforcement
-  // (non-viewer roles without TOTP) is handled in the protected layout
-  // where we have access to the user's role via firm_users.
-  if (user && !isPublic && pathname !== MFA_ROUTE) {
-    const { data: aal } =
-      await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-
-    if (
-      aal &&
-      aal.nextLevel === "aal2" &&
-      aal.currentLevel === "aal1"
-    ) {
-      const url = request.nextUrl.clone();
-      url.pathname = MFA_ROUTE;
-      return NextResponse.redirect(url);
-    }
-  }
+  // TODO: Re-enable MFA enforcement once Supabase Site URL is configured.
+  // MFA enrollment requires a valid Site URL in Supabase Auth config.
+  // See: Supabase Dashboard → Authentication → URL Configuration
+  //
+  // if (user && !isPublic && pathname !== MFA_ROUTE) {
+  //   const { data: aal } =
+  //     await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+  //
+  //   if (
+  //     aal &&
+  //     aal.nextLevel === "aal2" &&
+  //     aal.currentLevel === "aal1"
+  //   ) {
+  //     const url = request.nextUrl.clone();
+  //     url.pathname = MFA_ROUTE;
+  //     return NextResponse.redirect(url);
+  //   }
+  // }
 
   return supabaseResponse;
 }
