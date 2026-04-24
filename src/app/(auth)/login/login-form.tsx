@@ -4,9 +4,12 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { login } from "./actions";
+import { loginWithMagicLink, loginWithPassword } from "./actions";
+
+type Mode = "password" | "magic-link";
 
 export function LoginForm() {
+  const [mode, setMode] = useState<Mode>("password");
   const [pending, setPending] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -15,15 +18,19 @@ export function LoginForm() {
     setPending(true);
     setError(null);
 
-    const result = await login(formData);
+    const result =
+      mode === "magic-link"
+        ? await loginWithMagicLink(formData)
+        : await loginWithPassword(formData);
 
     if (result?.error) {
       setError(result.error);
       setPending(false);
-    } else {
+    } else if (mode === "magic-link") {
       setSent(true);
       setPending(false);
     }
+    // password login redirects server-side on success
   }
 
   if (sent) {
@@ -52,13 +59,40 @@ export function LoginForm() {
         />
       </div>
 
-      {error && (
-        <p className="text-sm text-destructive">{error}</p>
+      {mode === "password" && (
+        <div className="space-y-2">
+          <Label htmlFor="password">Password</Label>
+          <Input
+            id="password"
+            name="password"
+            type="password"
+            required
+            autoComplete="current-password"
+          />
+        </div>
       )}
 
+      {error && <p className="text-sm text-destructive">{error}</p>}
+
       <Button type="submit" className="w-full" disabled={pending}>
-        {pending ? "Sending link..." : "Send magic link"}
+        {pending
+          ? mode === "magic-link"
+            ? "Sending link..."
+            : "Signing in..."
+          : mode === "magic-link"
+            ? "Send magic link"
+            : "Sign in"}
       </Button>
+
+      <button
+        type="button"
+        className="w-full text-center text-sm text-muted-foreground hover:text-foreground"
+        onClick={() => setMode(mode === "password" ? "magic-link" : "password")}
+      >
+        {mode === "password"
+          ? "Use magic link instead"
+          : "Use password instead"}
+      </button>
     </form>
   );
 }
