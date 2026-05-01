@@ -51,3 +51,4 @@ next-env.d.ts
 .vscode/
 *.swp
 *.swo
+supabase/.temp/
