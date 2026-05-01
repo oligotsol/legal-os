@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC_ROUTES = ["/login", "/auth/callback", "/api/health", "/mfa"];
+const PUBLIC_ROUTES = ["/login", "/auth/callback", "/api/health", "/mfa", "/api/webhooks"];
 const MFA_ROUTE = "/mfa";
 
 export async function middleware(request: NextRequest) {
@@ -54,14 +54,11 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // TODO: Re-enable MFA enforcement once Supabase Site URL is configured.
-  // MFA enrollment requires a valid Site URL in Supabase Auth config.
-  // See: Supabase Dashboard → Authentication → URL Configuration
-  //
+  // MFA enforcement disabled for local development / demo.
+  // Re-enable once Supabase site URL is configured for production.
   // if (user && !isPublic && pathname !== MFA_ROUTE) {
   //   const { data: aal } =
   //     await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-  //
   //   if (
   //     aal &&
   //     aal.nextLevel === "aal2" &&
