@@ -1,5 +1,5 @@
 /**
- * seed-lfl-conversation.ts — Seed LFL conversation engine data
+ * seed-lfl-conversation.ts, Seed LFL conversation engine data
  *
  * Seeds jurisdictions, drip campaigns, ~38 drip templates (19 templates
  * × SMS/email variants), and 7 firm_config keys for Legacy First Law.
@@ -161,7 +161,7 @@ interface TemplateDef {
 
 const TEMPLATES: TemplateDef[] = [
   // -----------------------------------------------------------------------
-  // LEAD STAGE (campaign: lead-stage) — Templates 1-6
+  // LEAD STAGE (campaign: lead-stage) , Templates 1-6
   // -----------------------------------------------------------------------
 
   // Template 1: Initial outreach (SMS)
@@ -171,7 +171,7 @@ const TEMPLATES: TemplateDef[] = [
     channel: "sms",
     subject: null,
     body_template:
-      "Hi {{first_name}}, this is {{attorney_name}} with {{firm_name}}. I saw your inquiry and wanted to reach out personally. Do you have a few minutes to chat about your legal needs? — {{attorney_name}}",
+      "Hi {{first_name}}, this is {{attorney_name}} with {{firm_name}}. I saw your inquiry and wanted to reach out personally. Do you have a few minutes to chat about your legal needs? {{attorney_name}}",
     delay_hours: 0,
     display_order: 1,
     variant_label: null,
@@ -183,7 +183,7 @@ const TEMPLATES: TemplateDef[] = [
     channel: "email",
     subject: "{{first_name}}, your inquiry with {{firm_name}}",
     body_template:
-      "Hi {{first_name}},\n\nThank you for reaching out to {{firm_name}}. I'm {{attorney_name}}, and I'd love to help you with your legal needs.\n\nI specialize in estate planning, business formation, and trademark protection — all at flat fees with no surprise invoices.\n\nWould you have a few minutes for a quick call? You can reach me directly or schedule a time here: {{scheduling_link}}\n\nLooking forward to connecting.\n\n— {{attorney_name}}\n{{firm_name}}",
+      "Hi {{first_name}},\n\nThank you for reaching out to {{firm_name}}. I'm {{attorney_name}}, and I'd love to help you with your legal needs.\n\nI specialize in estate planning, business formation, and trademark protection, all at flat fees with no surprise invoices.\n\nWould you have a few minutes for a quick call? You can reach me directly or schedule a time here: {{scheduling_link}}\n\nLooking forward to connecting.\n\n{{attorney_name}}\n{{firm_name}}",
     delay_hours: 0,
     display_order: 1,
     variant_label: "email",
@@ -196,7 +196,7 @@ const TEMPLATES: TemplateDef[] = [
     channel: "sms",
     subject: null,
     body_template:
-      "Hi {{first_name}}, just following up on my earlier message. I'd love to help you get your legal matters taken care of. When works best for a quick call? — {{attorney_name}}",
+      "Hi {{first_name}}, just following up on my earlier message. I'd love to help you get your legal matters taken care of. When works best for a quick call? {{attorney_name}}",
     delay_hours: 24,
     display_order: 2,
     variant_label: null,
@@ -206,9 +206,9 @@ const TEMPLATES: TemplateDef[] = [
     name: "T2: Follow-Up #1 (Email)",
     campaign_slug: "lead-stage",
     channel: "email",
-    subject: "Following up — {{firm_name}}",
+    subject: "Following up, {{firm_name}}",
     body_template:
-      "Hi {{first_name}},\n\nI wanted to follow up on my previous message. I know life gets busy, but I don't want you to miss the opportunity to get your legal affairs in order.\n\nHere's what we can help with:\n- Estate planning (wills, trusts, powers of attorney)\n- Business formation and protection\n- Trademark registration and enforcement\n\nAll flat-fee, no hourly billing, and we typically deliver within 72 hours.\n\nSchedule a free consult: {{scheduling_link}}\n\n— {{attorney_name}}",
+      "Hi {{first_name}},\n\nI wanted to follow up on my previous message. I know life gets busy, but I don't want you to miss the opportunity to get your legal affairs in order.\n\nHere's what we can help with:\n- Estate planning (wills, trusts, powers of attorney)\n- Business formation and protection\n- Trademark registration and enforcement\n\nAll flat-fee, no hourly billing, and we typically deliver within 72 hours.\n\nSchedule a free consult: {{scheduling_link}}\n\n{{attorney_name}}",
     delay_hours: 24,
     display_order: 2,
     variant_label: "email",
@@ -221,7 +221,7 @@ const TEMPLATES: TemplateDef[] = [
     channel: "sms",
     subject: null,
     body_template:
-      "{{first_name}}, I have some availability this week for a free consultation. Book a time that works: {{scheduling_link}} — {{attorney_name}}",
+      "{{first_name}}, I have some availability this week for a free consultation. Book a time that works: {{scheduling_link}} {{attorney_name}}",
     delay_hours: 48,
     display_order: 3,
     variant_label: null,
@@ -231,9 +231,9 @@ const TEMPLATES: TemplateDef[] = [
     name: "T3: Schedule Consult (Email)",
     campaign_slug: "lead-stage",
     channel: "email",
-    subject: "Free consultation — pick a time",
+    subject: "Free consultation, pick a time",
     body_template:
-      "Hi {{first_name}},\n\nI have openings this week for a quick consultation. No cost, no obligation — just a chance to understand your situation and see if we can help.\n\nBook a time: {{scheduling_link}}\n\nMost of our clients get their estate planning or business docs done within 72 hours of our first call. Let's get started.\n\n— {{attorney_name}}\n{{firm_name}}",
+      "Hi {{first_name}},\n\nI have openings this week for a quick consultation. No cost, no obligation, just a chance to understand your situation and see if we can help.\n\nBook a time: {{scheduling_link}}\n\nMost of our clients get their estate planning or business docs done within 72 hours of our first call. Let's get started.\n\n{{attorney_name}}\n{{firm_name}}",
     delay_hours: 48,
     display_order: 3,
     variant_label: "email",
@@ -246,7 +246,7 @@ const TEMPLATES: TemplateDef[] = [
     channel: "sms",
     subject: null,
     body_template:
-      "{{first_name}}, did you know most estate plans can be completed in 72 hours? Flat fees, no surprises. Let me show you how easy it is. — {{attorney_name}}",
+      "{{first_name}}, did you know most estate plans can be completed in 72 hours? Flat fees, no surprises. Let me show you how easy it is. {{attorney_name}}",
     delay_hours: 96,
     display_order: 4,
     variant_label: null,
@@ -258,7 +258,7 @@ const TEMPLATES: TemplateDef[] = [
     channel: "email",
     subject: "Why families choose {{firm_name}}",
     body_template:
-      "Hi {{first_name}},\n\nI wanted to share why families and business owners choose {{firm_name}}:\n\n1. Flat fees only — you'll know the total cost upfront\n2. 72-hour turnaround — most docs completed within 3 days\n3. 100% remote — sign everything digitally from home\n4. We work with you until it's perfect\n\nThe cost of waiting is real. Without proper planning, your family could face months in probate court and tens of thousands in unnecessary legal fees.\n\nLet's fix that: {{scheduling_link}}\n\n— {{attorney_name}}",
+      "Hi {{first_name}},\n\nI wanted to share why families and business owners choose {{firm_name}}:\n\n1. Flat fees only, you'll know the total cost upfront\n2. 72-hour turnaround, most docs completed within 3 days\n3. 100% remote, sign everything digitally from home\n4. We work with you until it's perfect\n\nThe cost of waiting is real. Without proper planning, your family could face months in probate court and tens of thousands in unnecessary legal fees.\n\nLet's fix that: {{scheduling_link}}\n\n{{attorney_name}}",
     delay_hours: 96,
     display_order: 4,
     variant_label: "email",
@@ -271,7 +271,7 @@ const TEMPLATES: TemplateDef[] = [
     channel: "sms",
     subject: null,
     body_template:
-      "{{first_name}}, every day without a plan is another day your family is unprotected. I can help fix that this week. Want to chat? — {{attorney_name}}",
+      "{{first_name}}, every day without a plan is another day your family is unprotected. I can help fix that this week. Want to chat? {{attorney_name}}",
     delay_hours: 168,
     display_order: 5,
     variant_label: null,
@@ -284,14 +284,14 @@ const TEMPLATES: TemplateDef[] = [
     channel: "sms",
     subject: null,
     body_template:
-      "Hi {{first_name}}, this is my last follow-up. If you ever need help with estate planning or business docs, I'm here. Just reply to this message anytime. — {{attorney_name}}",
+      "Hi {{first_name}}, this is my last follow-up. If you ever need help with estate planning or business docs, I'm here. Just reply to this message anytime. {{attorney_name}}",
     delay_hours: 336,
     display_order: 6,
     variant_label: null,
   },
 
   // -----------------------------------------------------------------------
-  // ENGAGEMENT STAGE (campaign: engagement-stage) — Templates 7-9
+  // ENGAGEMENT STAGE (campaign: engagement-stage) , Templates 7-9
   // -----------------------------------------------------------------------
 
   // Template 7: Engagement letter sent notification (SMS)
@@ -301,7 +301,7 @@ const TEMPLATES: TemplateDef[] = [
     channel: "sms",
     subject: null,
     body_template:
-      "Hi {{first_name}}, I just sent your engagement letter to {{contact_name}} at {{attorney_email}}. Please review and sign at your earliest convenience. — {{attorney_name}}",
+      "Hi {{first_name}}, I just sent your engagement letter to {{contact_name}} at {{attorney_email}}. Please review and sign at your earliest convenience. {{attorney_name}}",
     delay_hours: 0,
     display_order: 1,
     variant_label: null,
@@ -313,7 +313,7 @@ const TEMPLATES: TemplateDef[] = [
     channel: "email",
     subject: "Your engagement letter from {{firm_name}}",
     body_template:
-      "Hi {{first_name}},\n\nGreat news — your engagement letter is ready for review and signature.\n\nWhat this covers:\n- The scope of work we discussed\n- Our flat fee agreement\n- Timeline and deliverables\n\nPlease review it carefully and sign electronically. Once signed, we'll get started immediately.\n\nQuestions? Just reply to this email or call me directly.\n\n— {{attorney_name}}\n{{firm_name}}",
+      "Hi {{first_name}},\n\nGreat news, your engagement letter is ready for review and signature.\n\nWhat this covers:\n- The scope of work we discussed\n- Our flat fee agreement\n- Timeline and deliverables\n\nPlease review it carefully and sign electronically. Once signed, we'll get started immediately.\n\nQuestions? Just reply to this email or call me directly.\n\n{{attorney_name}}\n{{firm_name}}",
     delay_hours: 0,
     display_order: 1,
     variant_label: "email",
@@ -326,7 +326,7 @@ const TEMPLATES: TemplateDef[] = [
     channel: "sms",
     subject: null,
     body_template:
-      "{{first_name}}, just a reminder — your engagement letter is waiting for your signature. Once signed, we start immediately. — {{attorney_name}}",
+      "{{first_name}}, just a reminder, your engagement letter is waiting for your signature. Once signed, we start immediately. {{attorney_name}}",
     delay_hours: 48,
     display_order: 2,
     variant_label: null,
@@ -339,14 +339,14 @@ const TEMPLATES: TemplateDef[] = [
     channel: "sms",
     subject: null,
     body_template:
-      "Hi {{first_name}}, I want to make sure your engagement letter doesn't expire. Can you sign it today? Happy to answer any questions. — {{attorney_name}}",
+      "Hi {{first_name}}, I want to make sure your engagement letter doesn't expire. Can you sign it today? Happy to answer any questions. {{attorney_name}}",
     delay_hours: 120,
     display_order: 3,
     variant_label: null,
   },
 
   // -----------------------------------------------------------------------
-  // PAYMENT STAGE (campaign: payment-stage) — Templates 10-12
+  // PAYMENT STAGE (campaign: payment-stage) , Templates 10-12
   // -----------------------------------------------------------------------
 
   // Template 10: Invoice sent with IOLTA language (Email)
@@ -356,7 +356,7 @@ const TEMPLATES: TemplateDef[] = [
     channel: "email",
     subject: "Invoice from {{firm_name}}",
     body_template:
-      "Hi {{first_name}},\n\nYour invoice is ready. Here are the details:\n\n{{payment_language}}\n\nPlease complete payment at your earliest convenience so we can begin work right away.\n\nIf you have questions about the invoice or payment options, just reply to this email.\n\n— {{attorney_name}}\n{{firm_name}}",
+      "Hi {{first_name}},\n\nYour invoice is ready. Here are the details:\n\n{{payment_language}}\n\nPlease complete payment at your earliest convenience so we can begin work right away.\n\nIf you have questions about the invoice or payment options, just reply to this email.\n\n{{attorney_name}}\n{{firm_name}}",
     delay_hours: 0,
     display_order: 1,
     variant_label: null,
@@ -368,7 +368,7 @@ const TEMPLATES: TemplateDef[] = [
     channel: "sms",
     subject: null,
     body_template:
-      "Hi {{first_name}}, your invoice has been sent to your email. Once payment is received, we'll start work immediately. — {{attorney_name}}",
+      "Hi {{first_name}}, your invoice has been sent to your email. Once payment is received, we'll start work immediately. {{attorney_name}}",
     delay_hours: 0,
     display_order: 1,
     variant_label: "sms",
@@ -381,7 +381,7 @@ const TEMPLATES: TemplateDef[] = [
     channel: "sms",
     subject: null,
     body_template:
-      "{{first_name}}, friendly reminder that your invoice is still outstanding. We're ready to start as soon as payment is received. — {{attorney_name}}",
+      "{{first_name}}, friendly reminder that your invoice is still outstanding. We're ready to start as soon as payment is received. {{attorney_name}}",
     delay_hours: 72,
     display_order: 2,
     variant_label: null,
@@ -394,14 +394,14 @@ const TEMPLATES: TemplateDef[] = [
     channel: "sms",
     subject: null,
     body_template:
-      "Hi {{first_name}}, just checking in on your invoice. Want to make sure we can get your matter moving. Need to discuss payment options? — {{attorney_name}}",
+      "Hi {{first_name}}, just checking in on your invoice. Want to make sure we can get your matter moving. Need to discuss payment options? {{attorney_name}}",
     delay_hours: 168,
     display_order: 3,
     variant_label: null,
   },
 
   // -----------------------------------------------------------------------
-  // POST-ENGAGEMENT (campaign: post-engagement) — Templates 13-15
+  // POST-ENGAGEMENT (campaign: post-engagement) , Templates 13-15
   // -----------------------------------------------------------------------
 
   // Template 13: Welcome / onboarding (Email)
@@ -409,9 +409,9 @@ const TEMPLATES: TemplateDef[] = [
     name: "T13: Welcome (Email)",
     campaign_slug: "post-engagement",
     channel: "email",
-    subject: "Welcome to {{firm_name}} — next steps",
+    subject: "Welcome to {{firm_name}} , next steps",
     body_template:
-      "Hi {{first_name}},\n\nWelcome to {{firm_name}}! We're excited to work with you.\n\nHere's what happens next:\n1. We'll review your information and begin drafting your documents\n2. You'll receive drafts for review within 72 hours\n3. We'll work with you on any revisions until everything is perfect\n4. Final documents will be sent for your signature\n\nIf you have any questions along the way, don't hesitate to reach out.\n\n— {{attorney_name}}\n{{firm_name}}",
+      "Hi {{first_name}},\n\nWelcome to {{firm_name}}! We're excited to work with you.\n\nHere's what happens next:\n1. We'll review your information and begin drafting your documents\n2. You'll receive drafts for review within 72 hours\n3. We'll work with you on any revisions until everything is perfect\n4. Final documents will be sent for your signature\n\nIf you have any questions along the way, don't hesitate to reach out.\n\n{{attorney_name}}\n{{firm_name}}",
     delay_hours: 0,
     display_order: 1,
     variant_label: null,
@@ -423,7 +423,7 @@ const TEMPLATES: TemplateDef[] = [
     channel: "sms",
     subject: null,
     body_template:
-      "{{first_name}}, welcome aboard! We've started on your matter. Expect drafts within 72 hours. Questions? Just text me. — {{attorney_name}}",
+      "{{first_name}}, welcome aboard! We've started on your matter. Expect drafts within 72 hours. Questions? Just text me. {{attorney_name}}",
     delay_hours: 0,
     display_order: 1,
     variant_label: "sms",
@@ -436,7 +436,7 @@ const TEMPLATES: TemplateDef[] = [
     channel: "sms",
     subject: null,
     body_template:
-      "Hi {{first_name}}, just a quick update — your documents are in progress. We'll have drafts to you shortly. — {{attorney_name}}",
+      "Hi {{first_name}}, just a quick update, your documents are in progress. We'll have drafts to you shortly. {{attorney_name}}",
     delay_hours: 48,
     display_order: 2,
     variant_label: null,
@@ -449,14 +449,14 @@ const TEMPLATES: TemplateDef[] = [
     channel: "sms",
     subject: null,
     body_template:
-      "{{first_name}}, your document drafts are ready for review! Check your email for details. Let me know if you have any questions. — {{attorney_name}}",
+      "{{first_name}}, your document drafts are ready for review! Check your email for details. Let me know if you have any questions. {{attorney_name}}",
     delay_hours: 72,
     display_order: 3,
     variant_label: null,
   },
 
   // -----------------------------------------------------------------------
-  // FOLLOW-UP (campaign: follow-up) — Templates 16-18
+  // FOLLOW-UP (campaign: follow-up) , Templates 16-18
   // -----------------------------------------------------------------------
 
   // Template 16: Re-engagement (SMS)
@@ -466,7 +466,7 @@ const TEMPLATES: TemplateDef[] = [
     channel: "sms",
     subject: null,
     body_template:
-      "Hi {{first_name}}, it's {{attorney_name}}. I wanted to check in — are you still interested in getting your legal matters handled? I'm here when you're ready. — {{attorney_name}}",
+      "Hi {{first_name}}, it's {{attorney_name}}. I wanted to check in, are you still interested in getting your legal matters handled? I'm here when you're ready. {{attorney_name}}",
     delay_hours: 0,
     display_order: 1,
     variant_label: null,
@@ -476,9 +476,9 @@ const TEMPLATES: TemplateDef[] = [
     name: "T16: Re-Engagement (Email)",
     campaign_slug: "follow-up",
     channel: "email",
-    subject: "Checking in — {{firm_name}}",
+    subject: "Checking in, {{firm_name}}",
     body_template:
-      "Hi {{first_name}},\n\nI hope you're doing well. I wanted to follow up on our previous conversation about your legal needs.\n\nIf your circumstances have changed or you have new questions, I'm happy to chat. Our flat-fee pricing and fast turnaround haven't changed.\n\nSchedule a call: {{scheduling_link}}\n\n— {{attorney_name}}\n{{firm_name}}",
+      "Hi {{first_name}},\n\nI hope you're doing well. I wanted to follow up on our previous conversation about your legal needs.\n\nIf your circumstances have changed or you have new questions, I'm happy to chat. Our flat-fee pricing and fast turnaround haven't changed.\n\nSchedule a call: {{scheduling_link}}\n\n{{attorney_name}}\n{{firm_name}}",
     delay_hours: 0,
     display_order: 1,
     variant_label: "email",
@@ -491,7 +491,7 @@ const TEMPLATES: TemplateDef[] = [
     channel: "sms",
     subject: null,
     body_template:
-      "{{first_name}}, just thinking about your situation. The sooner we get things in order, the better protected your family is. Want to schedule a quick call? — {{attorney_name}}",
+      "{{first_name}}, just thinking about your situation. The sooner we get things in order, the better protected your family is. Want to schedule a quick call? {{attorney_name}}",
     delay_hours: 168,
     display_order: 2,
     variant_label: null,
@@ -504,14 +504,14 @@ const TEMPLATES: TemplateDef[] = [
     channel: "sms",
     subject: null,
     body_template:
-      "Hi {{first_name}}, I'll leave the ball in your court. Whenever you're ready to move forward, just text or call. No pressure. — {{attorney_name}}",
+      "Hi {{first_name}}, I'll leave the ball in your court. Whenever you're ready to move forward, just text or call. No pressure. {{attorney_name}}",
     delay_hours: 336,
     display_order: 3,
     variant_label: null,
   },
 
   // -----------------------------------------------------------------------
-  // GENERAL (campaign: general) — Template 19
+  // GENERAL (campaign: general) , Template 19
   // -----------------------------------------------------------------------
 
   // Template 19: General communication (Email)
@@ -521,7 +521,7 @@ const TEMPLATES: TemplateDef[] = [
     channel: "email",
     subject: "A message from {{firm_name}}",
     body_template:
-      "Hi {{first_name}},\n\nThank you for your interest in {{firm_name}}. We're here to help with your legal needs — estate planning, business formation, trademarks, and more.\n\nFeel free to reach out anytime at {{attorney_email}} or schedule a consultation: {{scheduling_link}}\n\n— {{attorney_name}}\n{{firm_name}}",
+      "Hi {{first_name}},\n\nThank you for your interest in {{firm_name}}. We're here to help with your legal needs, estate planning, business formation, trademarks, and more.\n\nFeel free to reach out anytime at {{attorney_email}} or schedule a consultation: {{scheduling_link}}\n\n{{attorney_name}}\n{{firm_name}}",
     delay_hours: 0,
     display_order: 1,
     variant_label: null,
@@ -533,7 +533,7 @@ const TEMPLATES: TemplateDef[] = [
     channel: "sms",
     subject: null,
     body_template:
-      "Hi {{first_name}}, thanks for your interest in {{firm_name}}. I'm here to help — just reply or call anytime. — {{attorney_name}}",
+      "Hi {{first_name}}, thanks for your interest in {{firm_name}}. I'm here to help, just reply or call anytime. {{attorney_name}}",
     delay_hours: 0,
     display_order: 1,
     variant_label: "sms",
@@ -571,15 +571,17 @@ const FIRM_CONFIG_ENTRIES: { key: string; value: Record<string, unknown> }[] = [
         "pressure point", "slam dunk", "textbook case",
         "clear cut", "open and shut", "will likely win",
         "solid case", "airtight claim",
+        // Punctuation rules, backstop for the tone-level guidance.
+        ",", ",",
       ],
       sms_char_limit: 300,
       casualness_level: 2,
       per_jurisdiction_sign_offs: {
-        TX: { sms: "— Garrison", email: "— Garrison English\nLegacy First Law PLLC" },
-        IA: { sms: "— Garrison", email: "— Garrison English\nLegacy First Law PLLC" },
-        ND: { sms: "— Garrison", email: "— Garrison English\nLegacy First Law PLLC" },
-        PA: { sms: "— Bridget", email: "— Bridget Sciamanna\nLegacy First Law PLLC" },
-        NJ: { sms: "— Bridget", email: "— Bridget Sciamanna\nLegacy First Law PLLC" },
+        TX: { sms: ", Garrison", email: ", Garrison English\nLegacy First Law PLLC" },
+        IA: { sms: ", Garrison", email: ", Garrison English\nLegacy First Law PLLC" },
+        ND: { sms: ", Garrison", email: ", Garrison English\nLegacy First Law PLLC" },
+        PA: { sms: ", Bridget", email: ", Bridget Sciamanna\nLegacy First Law PLLC" },
+        NJ: { sms: ", Bridget", email: ", Bridget Sciamanna\nLegacy First Law PLLC" },
       },
       phone_number: "(210) 906-8835",
       firm_full_name: "Legacy First Law PLLC",
@@ -605,7 +607,7 @@ const FIRM_CONFIG_ENTRIES: { key: string; value: Record<string, unknown> }[] = [
     key: "sms_config",
     value: {
       max_length: 300,
-      sign_off: "— Garrison",
+      sign_off: ", Garrison",
     },
   },
   {
@@ -613,7 +615,7 @@ const FIRM_CONFIG_ENTRIES: { key: string; value: Record<string, unknown> }[] = [
     value: {
       default_from: "hello@legacyfirstlaw.com",
       firm_name: "Legacy First Law PLLC",
-      sign_off: "— Garrison English\nLegacy First Law PLLC",
+      sign_off: ", Garrison English\nLegacy First Law PLLC",
     },
   },
   {
@@ -637,11 +639,11 @@ const FIRM_CONFIG_ENTRIES: { key: string; value: Record<string, unknown> }[] = [
     key: "approval_mode",
     value: {
       // fee_quote, engagement_letter, invoice are ALWAYS always_review
-      // (hard-coded gate in approval-mode.ts — config here is advisory only)
+      // (hard-coded gate in approval-mode.ts, config here is advisory only)
       fee_quote: "always_review",
       engagement_letter: "always_review",
       invoice: "always_review",
-      // Messages default to always_review — set to "auto_approve" to skip attorney review
+      // Messages default to always_review, set to "auto_approve" to skip attorney review
       message: "always_review",
       // Lead notifications default to always_review
       other: "always_review",
@@ -732,7 +734,7 @@ async function main() {
   const slugToId = new Map(campRows.map((r) => [r.slug, r.id]));
 
   // ---------------------------------------------------------------
-  // 4. Drip templates (delete + re-insert — no unique constraint)
+  // 4. Drip templates (delete + re-insert, no unique constraint)
   // ---------------------------------------------------------------
   const { error: delErr } = await supabase
     .from("drip_templates")

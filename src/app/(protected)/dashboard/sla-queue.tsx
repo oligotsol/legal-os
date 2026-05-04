@@ -22,7 +22,7 @@ const SLA_LABELS: Record<SlaColor, string> = {
 
 export function SlaQueue({ items }: { items: SlaQueueItem[] }) {
   return (
-    <Card>
+    <Card className="relative overflow-hidden border-border/60 bg-card/80 backdrop-blur-sm transition-shadow hover:shadow-md hover:shadow-foreground/5">
       <CardHeader>
         <CardTitle>SLA Queue</CardTitle>
       </CardHeader>
@@ -30,11 +30,15 @@ export function SlaQueue({ items }: { items: SlaQueueItem[] }) {
         {items.length === 0 ? (
           <p className="text-sm text-muted-foreground">No matters with active SLAs.</p>
         ) : (
-          <div className="space-y-2">
+          <div className="stagger-children space-y-2">
             {items.slice(0, 10).map((item) => (
               <div
                 key={item.matterId}
-                className="flex items-center gap-3 rounded-md border px-3 py-2"
+                className="
+                  group flex items-center gap-3 rounded-md border px-3 py-2
+                  transition-all duration-200
+                  hover:-translate-y-px hover:border-foreground/20 hover:bg-muted/40 hover:shadow-sm
+                "
               >
                 <span
                   className={`h-2.5 w-2.5 shrink-0 rounded-full ${SLA_DOT_CLASSES[item.slaColor]}`}

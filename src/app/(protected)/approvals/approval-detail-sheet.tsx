@@ -64,18 +64,23 @@ export function ApprovalDetailSheet() {
 
   return (
     <Sheet open={!!itemId} onOpenChange={(open) => !open && handleClose()}>
-      <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
-        {isLoading && <DetailSkeleton />}
+      <SheetContent className="flex w-full flex-col gap-0 p-0 sm:max-w-lg">
+        {isLoading && (
+          <div className="overflow-y-auto p-6">
+            <DetailSkeleton />
+          </div>
+        )}
 
         {error && (
-          <div className="py-8 text-center">
+          <div className="overflow-y-auto p-6 py-8 text-center">
             <p className="text-sm text-destructive">{error}</p>
           </div>
         )}
 
         {!isLoading && !error && queueItem && (
           <>
-            <SheetHeader>
+            {/* Header — fixed at the top of the sheet */}
+            <SheetHeader className="shrink-0 border-b px-6 py-4">
               <div className="flex items-center gap-2">
                 <Badge
                   variant="secondary"
@@ -93,17 +98,20 @@ export function ApprovalDetailSheet() {
               </p>
             </SheetHeader>
 
-            <Separator className="my-4" />
+            {/* Body — scrolls; min-h-0 is critical so flex-1 actually shrinks */}
+            <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
+              <EntityDetailContent queueItem={queueItem} entity={entity} />
+            </div>
 
-            <EntityDetailContent queueItem={queueItem} entity={entity} />
-
-            <Separator className="my-4" />
-
+            {/* Action buttons — sticky at the bottom of the sheet */}
             {queueItem.status === "pending" && (
-              <ApprovalActions
-                queueItemId={queueItem.id}
-                initialContent={editableContent}
-              />
+              <div className="shrink-0 border-t bg-background px-6 py-4">
+                <ApprovalActions
+                  queueItemId={queueItem.id}
+                  initialContent={editableContent}
+                  entityType={queueItem.entity_type}
+                />
+              </div>
             )}
           </>
         )}

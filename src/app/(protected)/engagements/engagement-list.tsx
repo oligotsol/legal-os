@@ -37,23 +37,23 @@ export function EngagementList({ letters }: EngagementListProps) {
   }
 
   return (
-    <div className="overflow-hidden rounded-lg border">
+    <div className="animate-rise-in overflow-hidden rounded-lg border bg-card shadow-sm shadow-foreground/5">
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b bg-muted/50">
-            <th className="px-4 py-3 text-left font-medium">Client</th>
-            <th className="px-4 py-3 text-left font-medium">Matter Type</th>
-            <th className="px-4 py-3 text-left font-medium">State</th>
-            <th className="px-4 py-3 text-left font-medium">Status</th>
-            <th className="px-4 py-3 text-right font-medium">Fee</th>
-            <th className="px-4 py-3 text-right font-medium">Created</th>
+          <tr className="border-b bg-gradient-to-b from-muted/60 to-muted/30">
+            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">Client</th>
+            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">Matter Type</th>
+            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">State</th>
+            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">Status</th>
+            <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground">Fee</th>
+            <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground">Created</th>
           </tr>
         </thead>
         <tbody>
           {letters.map((letter) => (
             <tr
               key={letter.id}
-              className="border-b last:border-0 hover:bg-muted/30 cursor-pointer"
+              className="group cursor-pointer border-b last:border-0 transition-colors hover:bg-primary/[0.025]"
               onClick={() => router.push(`/engagements?id=${letter.id}`)}
             >
               <td className="px-4 py-3">

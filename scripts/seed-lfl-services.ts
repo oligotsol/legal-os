@@ -193,7 +193,7 @@ const DISCOUNT_TIERS = [
 const NEGOTIATION_CONFIG = {
   firm_name: "Legacy First Law PLLC",
   attorney_name: "Garrison",
-  tone: "Warm, direct, Texas-friendly. Use contractions. Lead with empathy, follow with urgency. Never sycophantic. Never use banned phrases or close variants.",
+  tone: "Warm, direct, Texas-friendly. Use contractions. Lead with empathy, follow with urgency. Never sycophantic. Never use banned phrases or close variants. Never use em dashes (—) or en dashes (–). Use periods, commas, or parentheses instead.",
   key_phrases: [
     "I get it — this stuff isn't fun, but it matters.",
     "Let me make this easy for you.",

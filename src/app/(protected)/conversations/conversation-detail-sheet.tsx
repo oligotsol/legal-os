@@ -23,6 +23,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { MessageBubble } from "./message-bubble";
 import { convertLead, sendMessage } from "./actions";
+import { ApprovalActions } from "../approvals/approval-actions";
 import type { ConversationThread } from "./queries";
 
 interface ConversationDetailSheetProps {
@@ -146,7 +147,7 @@ export function ConversationDetailSheet({
 
         <Separator />
 
-        <ScrollArea className="flex-1 px-4">
+        <ScrollArea className="min-h-0 flex-1 px-4">
           <div className="flex flex-col gap-3 pb-4">
             {thread.messages.length === 0 ? (
               <p className="py-8 text-center text-sm text-muted-foreground">
@@ -160,7 +161,25 @@ export function ConversationDetailSheet({
           </div>
         </ScrollArea>
 
-        {(thread.contactPhone || thread.contactEmail) && (
+        {/* If an AI draft is awaiting approval, show inline send/edit/reject
+            so the attorney never has to switch to /approvals to dispatch.
+            Compose box is hidden in this state — clearer to have one
+            primary action than two competing send affordances. */}
+        {thread.pendingApproval ? (
+          <>
+            <Separator />
+            <div className="border-t bg-muted/20 px-4 py-3">
+              <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-400">
+                AI draft awaiting your approval — send when ready
+              </p>
+              <ApprovalActions
+                queueItemId={thread.pendingApproval.queueItemId}
+                initialContent={thread.pendingApproval.content}
+                entityType="message"
+              />
+            </div>
+          </>
+        ) : (thread.contactPhone || thread.contactEmail) ? (
           <>
             <Separator />
             <ComposeBox
@@ -169,7 +188,7 @@ export function ConversationDetailSheet({
               hasEmail={!!thread.contactEmail}
             />
           </>
-        )}
+        ) : null}
 
         {thread.leadId && thread.leadStatus !== "converted" && thread.contactId && (
           <>

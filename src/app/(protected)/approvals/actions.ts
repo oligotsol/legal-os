@@ -43,6 +43,31 @@ const ENTITY_STATUS_MAP: Record<
   message: { table: "messages", statusField: "status" },
 };
 
+/**
+ * Snapshot the full underlying entity at the moment of approval/rejection
+ * so the immutable approvals row preserves what was decided on. Without
+ * this, "what did Garrison approve?" becomes a join through mutable rows
+ * (messages.content can be edited after the fact) and is not reliably
+ * reconstructable. This is the training-data backbone — capture once,
+ * forever queryable.
+ */
+async function snapshotEntity(
+  admin: ReturnType<typeof createAdminClient>,
+  firmId: string,
+  entityType: string,
+  entityId: string,
+): Promise<Record<string, unknown> | null> {
+  const entityMap = ENTITY_STATUS_MAP[entityType];
+  if (!entityMap) return null;
+  const { data } = await admin
+    .from(entityMap.table)
+    .select("*")
+    .eq("id", entityId)
+    .eq("firm_id", firmId)
+    .maybeSingle();
+  return data as Record<string, unknown> | null;
+}
+
 export async function approveItem(formData: FormData) {
   const queueItemId = formData.get("queueItemId") as string;
   if (!queueItemId) throw new Error("Missing queue item ID");
@@ -63,12 +88,24 @@ export async function approveItem(formData: FormData) {
     throw new Error("Queue item not found or already processed");
   }
 
-  // Insert immutable approval record
+  // Snapshot entity state BEFORE the approval flips its status.
+  const snapshot = await snapshotEntity(
+    admin,
+    firmId,
+    queueItem.entity_type,
+    queueItem.entity_id,
+  );
+
+  // Insert immutable approval record. For plain "approved" (no edits),
+  // edited_content equals original_content so a unified "what was sent"
+  // query works regardless of decision type.
   const { error: approvalErr } = await admin.from("approvals").insert({
     firm_id: firmId,
     queue_item_id: queueItemId,
     decision: "approved",
     decided_by: userId,
+    original_content: snapshot,
+    edited_content: snapshot,
   });
 
   if (approvalErr) throw new Error(`Approval insert failed: ${approvalErr.message}`);
@@ -136,12 +173,21 @@ export async function rejectItem(formData: FormData) {
     throw new Error("Queue item not found or already processed");
   }
 
+  // Snapshot what was rejected — useful for training ("Garrison rejected this kind of draft").
+  const snapshot = await snapshotEntity(
+    admin,
+    firmId,
+    queueItem.entity_type,
+    queueItem.entity_id,
+  );
+
   const { error: approvalErr } = await admin.from("approvals").insert({
     firm_id: firmId,
     queue_item_id: queueItemId,
     decision: "rejected",
     decided_by: userId,
     reason: reason.trim(),
+    original_content: snapshot,
   });
 
   if (approvalErr) throw new Error(`Approval insert failed: ${approvalErr.message}`);
@@ -197,8 +243,14 @@ export async function editAndApproveItem(formData: FormData) {
     throw new Error("Queue item not found or already processed");
   }
 
-  // Build original content from metadata
-  const originalContent = queueItem.metadata ?? {};
+  // Snapshot the FULL entity before edit, not the 200-char metadata preview.
+  const originalContent =
+    (await snapshotEntity(
+      admin,
+      firmId,
+      queueItem.entity_type,
+      queueItem.entity_id,
+    )) ?? (queueItem.metadata ?? {});
 
   const { error: approvalErr } = await admin.from("approvals").insert({
     firm_id: firmId,

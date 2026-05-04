@@ -31,19 +31,25 @@ export default async function DashboardPage() {
   return (
     <>
       <PageHeader title="Command Center" />
-      <div className="grid gap-4 p-6 lg:grid-cols-2 xl:grid-cols-3">
-        <div className="lg:col-span-2 xl:col-span-2">
-          <PipelineFunnel items={funnel} />
-        </div>
-        <ApprovalSummary items={approvals} />
-        <SlaQueue items={slaQueue} />
-        <AiSpendCard
-          items={aiSpend.items}
-          totalCostCents={aiSpend.totalCostCents}
+      <div className="relative">
+        <div
+          aria-hidden
+          className="mesh-aurora pointer-events-none absolute inset-0 -z-10"
         />
-        <AuditTrail entries={auditEntries} />
-        <div className="lg:col-span-2 xl:col-span-3">
-          <ActiveMattersTable matters={activeMatters} />
+        <div className="stagger-children grid gap-4 p-6 lg:grid-cols-2 xl:grid-cols-3">
+          <div className="lg:col-span-2 xl:col-span-2">
+            <PipelineFunnel items={funnel} />
+          </div>
+          <ApprovalSummary items={approvals} />
+          <SlaQueue items={slaQueue} />
+          <AiSpendCard
+            items={aiSpend.items}
+            totalCostCents={aiSpend.totalCostCents}
+          />
+          <AuditTrail entries={auditEntries} />
+          <div className="lg:col-span-2 xl:col-span-3">
+            <ActiveMattersTable matters={activeMatters} />
+          </div>
         </div>
       </div>
     </>

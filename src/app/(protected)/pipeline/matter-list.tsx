@@ -9,13 +9,15 @@ interface MatterListProps {
 export function MatterList({ matters }: MatterListProps) {
   if (matters.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 text-center">
-        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/5">
-          <Briefcase className="h-6 w-6 text-primary/40" />
+      <div className="animate-rise-in flex flex-col items-center justify-center py-20 text-center">
+        <div className="relative flex h-14 w-14 items-center justify-center rounded-full bg-primary/5">
+          <span
+            aria-hidden
+            className="absolute inset-0 rounded-full bg-primary/10 animate-soft-pulse"
+          />
+          <Briefcase className="relative h-7 w-7 text-primary/50" />
         </div>
-        <h3 className="mt-4 text-sm font-medium text-foreground">
-          No matters
-        </h3>
+        <h3 className="mt-4 text-sm font-medium text-foreground">No matters</h3>
         <p className="mt-1 text-sm text-muted-foreground">
           No matters found for this stage.
         </p>
@@ -24,7 +26,7 @@ export function MatterList({ matters }: MatterListProps) {
   }
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="stagger-children flex flex-col gap-2">
       {matters.map((matter) => (
         <MatterCard
           key={matter.id}

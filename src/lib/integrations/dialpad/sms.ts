@@ -64,7 +64,7 @@ export async function sendSms(
         Accept: "application/json",
       },
       body: JSON.stringify({
-        to_number: parsedInput.to,
+        to_numbers: [parsedInput.to],
         from_number: parsedInput.from,
         text: parsedInput.body,
       }),
@@ -96,7 +96,7 @@ export async function sendSms(
   const parsed = DialpadSmsResponseSchema.parse(json);
 
   return {
-    messageId: parsed.request_id,
+    messageId: parsed.id,
     provider: "dialpad",
     dryRun: false,
     acceptedAt: new Date().toISOString(),

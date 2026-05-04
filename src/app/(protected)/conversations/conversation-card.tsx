@@ -4,12 +4,17 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { AlertTriangle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { formatRelativeTime } from "@/lib/format";
+import {
+  CHANNEL_BADGE_CLASSES,
+  CHANNEL_LABELS,
+  ribbonForChannel,
+} from "@/lib/channel-style";
 import type { ConversationListItem } from "./queries";
 
 const STATUS_COLORS: Record<string, string> = {
-  active: "bg-emerald-500",
+  active: "bg-emerald-500 animate-soft-pulse",
   paused: "bg-yellow-500",
-  escalated: "bg-red-500",
+  escalated: "bg-red-500 animate-soft-pulse",
   closed: "bg-gray-400",
 };
 
@@ -45,11 +50,22 @@ export function ConversationCard({ conversation }: ConversationCardProps) {
     <button
       onClick={handleClick}
       className={`
-        group w-full rounded-lg border bg-card p-4 text-left transition-all duration-150
-        ring-1 ring-foreground/10 hover:ring-foreground/20 hover:shadow-sm
-        ${isSelected ? "ring-primary/40 shadow-sm" : ""}
+        group relative w-full overflow-hidden rounded-lg border bg-card p-4 pl-5 text-left
+        ring-1 ring-foreground/10 transition-all duration-200 ease-out
+        hover:-translate-y-px hover:shadow-md hover:shadow-foreground/5 hover:ring-foreground/20
+        ${isSelected ? "ring-primary/50 shadow-md shadow-primary/5" : ""}
       `}
     >
+      {/* Channel-coded ribbon */}
+      <span
+        aria-hidden
+        className={`
+          absolute inset-y-0 left-0 w-1
+          ${ribbonForChannel(conversation.channel)}
+          ${isSelected ? "opacity-100" : "opacity-70 group-hover:opacity-100"}
+          transition-opacity duration-200
+        `}
+      />
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
@@ -61,12 +77,15 @@ export function ConversationCard({ conversation }: ConversationCardProps) {
               title={conversation.status}
             />
             {conversation.channel && (
-              <Badge variant="secondary" className="text-[10px]">
-                {conversation.channel.toUpperCase()}
+              <Badge
+                variant="secondary"
+                className={`text-[10px] font-medium ${CHANNEL_BADGE_CLASSES[conversation.channel] ?? ""}`}
+              >
+                {CHANNEL_LABELS[conversation.channel] ?? conversation.channel.toUpperCase()}
               </Badge>
             )}
             {conversation.hasEthicsFlags && (
-              <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-orange-500" />
+              <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-orange-500 animate-soft-pulse" />
             )}
           </div>
 

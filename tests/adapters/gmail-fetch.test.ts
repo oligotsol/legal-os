@@ -93,7 +93,7 @@ describe("listUnreadMessages", () => {
     );
     vi.stubGlobal("fetch", fetchMock);
 
-    const messages = await listUnreadMessages(validCreds);
+    const messages = await listUnreadMessages(validCreds, { labelQuery: "legal-os-intake" });
 
     expect(messages).toHaveLength(2);
     expect(messages[0].id).toBe("msg_1");
@@ -107,22 +107,27 @@ describe("listUnreadMessages", () => {
     );
     vi.stubGlobal("fetch", fetchMock);
 
-    const messages = await listUnreadMessages(validCreds);
+    const messages = await listUnreadMessages(validCreds, { labelQuery: "legal-os-intake" });
     expect(messages).toHaveLength(0);
   });
 
-  it("passes correct query params including maxResults", async () => {
+  it("passes correct query params including maxResults and label", async () => {
     const fetchMock = mockFetchSequence(
       { ok: true, status: 200, body: tokenResponse },
       { ok: true, status: 200, body: { messages: [], resultSizeEstimate: 0 } },
     );
     vi.stubGlobal("fetch", fetchMock);
 
-    await listUnreadMessages(validCreds, { maxResults: 5 });
+    await listUnreadMessages(validCreds, { labelQuery: "legal-os-intake", maxResults: 5 });
 
     const listUrl = fetchMock.mock.calls[1][0] as string;
     expect(listUrl).toContain("maxResults=5");
-    expect(listUrl).toContain("is%3Aunread");
+    expect(listUrl).toContain("label%3Alegal-os-intake");
+    expect(listUrl).toContain("newer_than%3A1d");
+    // Must NOT require unread (Garrison may have opened it) or inbox
+    // (filter may "skip inbox"). De-dupe is handled by idempotency_key.
+    expect(listUrl).not.toContain("is%3Aunread");
+    expect(listUrl).not.toContain("in%3Ainbox");
   });
 
   it("throws GmailEmailError on API failure", async () => {
@@ -132,7 +137,15 @@ describe("listUnreadMessages", () => {
     );
     vi.stubGlobal("fetch", fetchMock);
 
-    await expect(listUnreadMessages(validCreds)).rejects.toThrow(GmailEmailError);
+    await expect(
+      listUnreadMessages(validCreds, { labelQuery: "legal-os-intake" }),
+    ).rejects.toThrow(GmailEmailError);
+  });
+
+  it("refuses to fetch without a label", async () => {
+    await expect(
+      listUnreadMessages(validCreds, { labelQuery: "" }),
+    ).rejects.toThrow(/labelQuery/);
   });
 });
 

@@ -13,6 +13,18 @@ const SLA_DOT_CLASSES: Record<SlaColor, string> = {
   NONE: "bg-gray-300",
 };
 
+const SLA_RIBBON_CLASSES: Record<SlaColor, string> = {
+  CRITICAL:
+    "bg-gradient-to-b from-red-600 to-red-600/40",
+  RED: "bg-gradient-to-b from-red-500 to-red-500/40",
+  ORANGE:
+    "bg-gradient-to-b from-orange-500 to-orange-500/40",
+  YELLOW:
+    "bg-gradient-to-b from-yellow-500 to-yellow-500/40",
+  GREEN: "bg-gradient-to-b from-emerald-500 to-emerald-500/40",
+  NONE: "bg-gradient-to-b from-foreground/15 to-foreground/5",
+};
+
 interface MatterCardProps {
   id: string;
   contactName: string;
@@ -44,11 +56,22 @@ export function MatterCard({
     <button
       onClick={handleClick}
       className={`
-        group w-full rounded-lg border bg-card p-4 text-left transition-all duration-150
-        ring-1 ring-foreground/10 hover:ring-foreground/20 hover:shadow-sm
-        ${isSelected ? "ring-primary/40 shadow-sm" : ""}
+        group relative w-full overflow-hidden rounded-lg border bg-card p-4 pl-5 text-left
+        ring-1 ring-foreground/10 transition-all duration-200 ease-out
+        hover:-translate-y-px hover:shadow-md hover:shadow-foreground/5 hover:ring-foreground/20
+        ${isSelected ? "ring-primary/50 shadow-md shadow-primary/5" : ""}
       `}
     >
+      {/* SLA-color ribbon */}
+      <span
+        aria-hidden
+        className={`
+          absolute inset-y-0 left-0 w-1
+          ${SLA_RIBBON_CLASSES[slaColor]}
+          ${isSelected ? "opacity-100" : "opacity-70 group-hover:opacity-100"}
+          transition-opacity duration-200
+        `}
+      />
       <div className="flex items-start gap-3">
         <span
           className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${SLA_DOT_CLASSES[slaColor]}`}

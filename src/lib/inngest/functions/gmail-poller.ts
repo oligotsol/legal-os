@@ -86,6 +86,21 @@ async function processGmailForFirm(
 ): Promise<number> {
   const credentials = GmailCredentialsSchema.parse(rawCredentials);
 
+  // Resolve the firm's intake label. Falls back to a sensible default so
+  // a tenant that hasn't customized still gets a scoped fetch (vs. their
+  // entire inbox). Without this guard the poller treats every unread
+  // email as an intake lead — bad.
+  const { data: labelCfg } = await admin
+    .from("firm_config")
+    .select("value")
+    .eq("firm_id", firmId)
+    .eq("key", "gmail_intake_label")
+    .maybeSingle();
+  const labelQuery =
+    ((labelCfg?.value as Record<string, unknown> | null)?.value as string | undefined) ??
+    process.env.GMAIL_INTAKE_LABEL ??
+    "legal-os-intake";
+
   const { data: syncState } = await admin
     .from("integration_sync_state")
     .select("cursor, id")
@@ -94,7 +109,10 @@ async function processGmailForFirm(
     .eq("sync_type", "gmail_poll")
     .maybeSingle();
 
-  const messages = await listUnreadMessages(credentials, { maxResults: 10 });
+  const messages = await listUnreadMessages(credentials, {
+    labelQuery,
+    maxResults: 10,
+  });
 
   if (messages.length === 0) {
     if (syncState) {

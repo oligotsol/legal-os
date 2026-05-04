@@ -128,3 +128,95 @@
     @apply font-sans;
   }
 }
+
+@layer utilities {
+  @keyframes rise-fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-rise-in {
+    animation: rise-fade-in 360ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+
+  /* Stagger children: each direct child gets a slightly later start.
+     Cap at 12 so an overflowing list doesn't drift visibly out of sync. */
+  .stagger-children > * {
+    animation: rise-fade-in 360ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+  .stagger-children > *:nth-child(1)  { animation-delay: 0ms; }
+  .stagger-children > *:nth-child(2)  { animation-delay: 40ms; }
+  .stagger-children > *:nth-child(3)  { animation-delay: 80ms; }
+  .stagger-children > *:nth-child(4)  { animation-delay: 120ms; }
+  .stagger-children > *:nth-child(5)  { animation-delay: 160ms; }
+  .stagger-children > *:nth-child(6)  { animation-delay: 200ms; }
+  .stagger-children > *:nth-child(7)  { animation-delay: 240ms; }
+  .stagger-children > *:nth-child(8)  { animation-delay: 280ms; }
+  .stagger-children > *:nth-child(9)  { animation-delay: 320ms; }
+  .stagger-children > *:nth-child(10) { animation-delay: 360ms; }
+  .stagger-children > *:nth-child(11) { animation-delay: 400ms; }
+  .stagger-children > *:nth-child(n+12) { animation-delay: 440ms; }
+
+  /* Subtle "live" pulse for indicators that should feel real-time. */
+  @keyframes soft-pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50%      { opacity: 0.55; transform: scale(0.92); }
+  }
+  .animate-soft-pulse {
+    animation: soft-pulse 2.4s ease-in-out infinite;
+  }
+
+  /* Frosted-glass header — sits above content, blurs whatever scrolls under. */
+  .glass-header {
+    background-color: color-mix(in oklch, var(--background) 70%, transparent);
+    backdrop-filter: saturate(140%) blur(10px);
+    -webkit-backdrop-filter: saturate(140%) blur(10px);
+  }
+
+  /* Subtle aurora-style mesh background for hero / landing surfaces.
+     Renders as a layer behind content; keeps contrast high. */
+  .mesh-aurora {
+    background:
+      radial-gradient(at 18% 12%, oklch(0.85 0.12 265 / 0.18) 0px, transparent 45%),
+      radial-gradient(at 88% 18%, oklch(0.85 0.10 200 / 0.14) 0px, transparent 45%),
+      radial-gradient(at 70% 90%, oklch(0.85 0.10 305 / 0.12) 0px, transparent 50%);
+  }
+  .dark .mesh-aurora {
+    background:
+      radial-gradient(at 18% 12%, oklch(0.55 0.15 265 / 0.20) 0px, transparent 45%),
+      radial-gradient(at 88% 18%, oklch(0.55 0.12 200 / 0.16) 0px, transparent 45%),
+      radial-gradient(at 70% 90%, oklch(0.55 0.12 305 / 0.14) 0px, transparent 50%);
+  }
+
+  /* Card-shimmer for skeletons that need a richer feel than a flat block. */
+  @keyframes card-shimmer {
+    0%   { background-position: -200% 0; }
+    100% { background-position:  200% 0; }
+  }
+  .skeleton-shimmer {
+    background-image: linear-gradient(
+      90deg,
+      transparent 0%,
+      color-mix(in oklch, var(--foreground) 6%, transparent) 50%,
+      transparent 100%
+    );
+    background-size: 200% 100%;
+    animation: card-shimmer 1.6s ease-in-out infinite;
+  }
+
+  /* Honor reduced-motion preference. */
+  @media (prefers-reduced-motion: reduce) {
+    .animate-rise-in,
+    .animate-soft-pulse,
+    .skeleton-shimmer,
+    .stagger-children > * {
+      animation: none !important;
+    }
+  }
+}

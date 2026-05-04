@@ -41,13 +41,35 @@ export function Sidebar({
       className={`flex h-screen flex-col border-r border-sidebar-border bg-sidebar transition-[width] duration-200 ${collapsed ? "w-16" : "w-64"}`}
     >
       {/* Logo / Firm name */}
-      <div className="flex h-14 items-center gap-3 border-b border-sidebar-border px-4">
+      <div className={`flex h-14 items-center gap-2.5 border-b border-sidebar-border ${collapsed ? "justify-center px-2" : "px-4"}`}>
+        {!collapsed && (
+          <span
+            aria-hidden
+            className="relative flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-gradient-to-br from-sidebar-primary to-sidebar-primary/70 text-[11px] font-bold tracking-tight text-sidebar-primary-foreground shadow-sm"
+          >
+            {firmName
+              .split(/\s+/)
+              .filter(Boolean)
+              .slice(0, 2)
+              .map((w) => w[0]?.toUpperCase())
+              .join("") || "·"}
+            {/* Live indicator — system connected */}
+            <span
+              aria-hidden
+              title="System online"
+              className="absolute -right-0.5 -bottom-0.5 flex h-2.5 w-2.5"
+            >
+              <span className="absolute inset-0 rounded-full bg-emerald-500 animate-soft-pulse" />
+              <span className="relative h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-sidebar" />
+            </span>
+          </span>
+        )}
         {!collapsed && (
           <span className="truncate text-sm font-semibold tracking-tight text-sidebar-foreground">
             {firmName}
           </span>
         )}
-        <div className={collapsed ? "mx-auto" : "ml-auto"}>
+        <div className={collapsed ? "" : "ml-auto"}>
           <SidebarToggle collapsed={collapsed} />
         </div>
       </div>

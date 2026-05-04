@@ -38,19 +38,19 @@ export function MessageBubble({ message }: MessageBubbleProps) {
 
   return (
     <div
-      className={`flex ${isInbound ? "justify-start" : "justify-end"}`}
+      className={`animate-rise-in flex ${isInbound ? "justify-start" : "justify-end"}`}
     >
       <div
         className={`
-          max-w-[80%] rounded-lg px-3 py-2
+          max-w-[80%] px-3.5 py-2.5 shadow-sm transition-shadow
           ${isInbound
-            ? "bg-muted text-foreground"
-            : "bg-primary/10 text-foreground"
+            ? "rounded-2xl rounded-bl-md bg-muted text-foreground hover:shadow-md"
+            : "rounded-2xl rounded-br-md bg-gradient-to-br from-primary/15 to-primary/5 text-foreground ring-1 ring-primary/15 hover:shadow-md hover:shadow-primary/10"
           }
         `}
       >
         {message.content && (
-          <p className="whitespace-pre-wrap text-sm">{message.content}</p>
+          <p className="whitespace-pre-wrap text-sm leading-relaxed">{message.content}</p>
         )}
 
         <div

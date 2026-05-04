@@ -96,7 +96,12 @@ export async function POST(request: Request) {
         ethics: result.disposition,
       });
     }
-    return NextResponse.json({ received: true });
+    return NextResponse.json({
+      received: true,
+      disposition: result.disposition,
+      ethics: result.ethicsDisposition,
+      conversation_id: result.conversationId,
+    });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     console.error("Dialpad webhook processing failed:", message);

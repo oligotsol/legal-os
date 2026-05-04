@@ -29,9 +29,9 @@ export const ConverseResponseSchema = z.object({
   reply: z.string().min(1),
   suggested_channel: z.enum(["sms", "email"]),
   phase_recommendation: z.enum(["stay", "advance", "escalate"]),
-  next_phase: z.string().optional(),
+  next_phase: z.string().nullish(),
   escalation_signal: z.boolean(),
-  escalation_reason: z.string().optional(),
+  escalation_reason: z.string().nullish(),
   reasoning: z.string(),
 });
 
@@ -118,13 +118,14 @@ export async function converse(
     throw new ConversationError("No text content in API response");
   }
 
-  // Parse JSON response
+  // Parse JSON response — strip ```json fences if the model wrapped them.
+  const stripped = stripJsonFence(textBlock.text);
   let parsed: unknown;
   try {
-    parsed = JSON.parse(textBlock.text);
+    parsed = JSON.parse(stripped);
   } catch {
     throw new ConversationError(
-      `Failed to parse conversation response as JSON: ${textBlock.text.slice(0, 200)}`,
+      `Failed to parse conversation response as JSON: ${stripped.slice(0, 200)}`,
     );
   }
 
@@ -147,4 +148,10 @@ export async function converse(
     latencyMs,
     model: resolvedModel,
   };
+}
+
+function stripJsonFence(text: string): string {
+  const trimmed = text.trim();
+  const fenceMatch = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/);
+  return fenceMatch ? fenceMatch[1].trim() : trimmed;
 }

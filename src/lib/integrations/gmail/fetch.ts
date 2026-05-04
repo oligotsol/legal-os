@@ -103,20 +103,41 @@ export interface ParsedEmail {
 /**
  * List unread messages from the inbox, optionally after a given history ID.
  * Returns up to `maxResults` message stubs (id + threadId).
+ *
+ * **Always scoped by label.** Without a label filter the poller would
+ * pick up every unread email in the user's inbox — newsletters, system
+ * mail, personal threads — and create Legal OS leads for each one.
+ * Callers must pass `labelQuery` (e.g. `"legal-os-intake"`) so only
+ * intake-labeled mail is fetched. Set up: Garrison creates a Gmail
+ * label and an inbound filter rule that applies it to intake mail.
  */
 export async function listUnreadMessages(
   credentials: GmailCredentials,
   options: {
+    /** Required Gmail label name. Mail without this label is ignored. */
+    labelQuery: string;
     maxResults?: number;
     /** Only fetch messages newer than this Gmail message ID */
     afterMessageId?: string;
-  } = {},
+  },
 ): Promise<Array<{ id: string; threadId: string }>> {
   const accessToken = await getAccessToken(credentials);
   const maxResults = options.maxResults ?? 20;
 
-  // Build query: unread, inbox, not sent by us
-  let q = "is:unread in:inbox -from:me";
+  if (!options.labelQuery || !options.labelQuery.trim()) {
+    throw new GmailEmailError(
+      "listUnreadMessages requires a labelQuery — refusing to fetch the entire inbox",
+    );
+  }
+
+  // Query: any mail in the last 24h with the intake label, not from us.
+  // We deliberately do NOT require `is:unread` or `in:inbox`:
+  //   - is:unread misses any email Garrison already opened in Gmail.
+  //   - in:inbox misses any "Skip the Inbox" filter routing.
+  // De-duplication is handled downstream via webhook_events.idempotency_key
+  // (keyed by Gmail message id) so re-listing already-processed mail is a
+  // cheap no-op.
+  let q = `newer_than:1d -from:me label:${options.labelQuery}`;
   if (options.afterMessageId) {
     q += ` after:${options.afterMessageId}`;
   }

@@ -21,8 +21,9 @@ export type DialpadCredentials = z.infer<typeof DialpadCredentialsSchema>;
 // ---------------------------------------------------------------------------
 
 export const DialpadSmsResponseSchema = z.object({
-  request_id: z.string(),
-  /** Dialpad may include additional fields; we only require request_id */
+  id: z.string(),
+  message_status: z.string().optional(),
+  /** Dialpad returns additional fields (created_date, contact_id, target_id, etc.) — ignored */
 });
 
 export type DialpadSmsResponse = z.infer<typeof DialpadSmsResponseSchema>;

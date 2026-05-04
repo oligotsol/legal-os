@@ -41,22 +41,36 @@ export function EntityDetailContent({
 }
 
 function MessageDetail({ entity }: { entity: Record<string, unknown> }) {
+  // Note: the message body is shown (and is editable) in the action panel
+  // below — we don't repeat it here. This block surfaces channel + AI
+  // metadata so the attorney can verify which path the reply will go out
+  // on and what phase the AI thought we were in.
+  const meta = entity.metadata as Record<string, unknown> | null;
+  const reasoning = meta?.reasoning as string | undefined;
+  const phase = meta?.phase_recommendation as string | undefined;
+  const escalated = meta?.escalation_signal as boolean | undefined;
   return (
-    <div className="space-y-4">
-      <div>
-        <h4 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-          Message Content
-        </h4>
-        <div className="mt-2 rounded-md bg-muted/50 p-3">
-          <p className="whitespace-pre-wrap text-sm">{String(entity.content ?? "")}</p>
-        </div>
+    <div className="space-y-3">
+      <div className="flex flex-wrap gap-x-6 gap-y-2">
+        {entity.channel ? (
+          <DetailRow label="Channel" value={String(entity.channel)} />
+        ) : null}
+        {entity.sender_type ? (
+          <DetailRow label="Sender" value={String(entity.sender_type)} />
+        ) : null}
+        {phase ? <DetailRow label="Phase" value={phase} /> : null}
+        {escalated ? <DetailRow label="Escalation" value="flagged" /> : null}
       </div>
-      {entity.channel ? (
-        <DetailRow label="Channel" value={String(entity.channel)} />
-      ) : null}
-      {entity.sender_type ? (
-        <DetailRow label="Sender" value={String(entity.sender_type)} />
-      ) : null}
+      {reasoning && (
+        <div>
+          <h4 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            AI Reasoning
+          </h4>
+          <p className="mt-1.5 text-xs italic text-muted-foreground">
+            {reasoning}
+          </p>
+        </div>
+      )}
     </div>
   );
 }

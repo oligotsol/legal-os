@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { formatRelativeTime } from "@/lib/format";
 import type { LeadListItem } from "./queries";
@@ -20,6 +21,8 @@ const STATUS_VARIANTS: Record<string, "default" | "secondary" | "outline" | "des
 };
 
 export function LeadList({ leads }: LeadListProps) {
+  const router = useRouter();
+
   if (leads.length === 0) {
     return (
       <div className="py-12 text-center">
@@ -34,16 +37,16 @@ export function LeadList({ leads }: LeadListProps) {
   }
 
   return (
-    <div className="overflow-hidden rounded-lg border">
+    <div className="animate-rise-in overflow-hidden rounded-lg border bg-card shadow-sm shadow-foreground/5">
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b bg-muted/50">
-            <th className="px-4 py-3 text-left font-medium">Name</th>
-            <th className="px-4 py-3 text-left font-medium">Contact</th>
-            <th className="px-4 py-3 text-left font-medium">Source</th>
-            <th className="px-4 py-3 text-left font-medium">Status</th>
-            <th className="px-4 py-3 text-left font-medium">Classification</th>
-            <th className="px-4 py-3 text-right font-medium">Created</th>
+          <tr className="border-b bg-gradient-to-b from-muted/60 to-muted/30">
+            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">Name</th>
+            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">Contact</th>
+            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">Source</th>
+            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">Status</th>
+            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">Classification</th>
+            <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground">Created</th>
           </tr>
         </thead>
         <tbody>
@@ -53,9 +56,25 @@ export function LeadList({ leads }: LeadListProps) {
               : `/leads`;
 
             return (
-              <tr key={lead.id} className="border-b last:border-0 hover:bg-muted/30">
-                <td className="px-4 py-3">
-                  <Link href={href} className="font-medium hover:underline">
+              <tr
+                key={lead.id}
+                onClick={() => router.push(href)}
+                className="group cursor-pointer border-b last:border-0 transition-colors hover:bg-primary/[0.025]"
+              >
+                <td className="relative px-4 py-3">
+                  {/* Hover accent stripe on the leftmost cell */}
+                  <span
+                    aria-hidden
+                    className="absolute inset-y-0 left-0 w-0.5 bg-primary opacity-0 transition-opacity group-hover:opacity-100"
+                  />
+                  {/* Keep the Link for keyboard / accessibility navigation;
+                      stop propagation so it doesn't double-trigger the row's
+                      onClick. */}
+                  <Link
+                    href={href}
+                    onClick={(e) => e.stopPropagation()}
+                    className="font-medium decoration-primary/30 underline-offset-4 hover:underline"
+                  >
                     {lead.fullName}
                   </Link>
                 </td>

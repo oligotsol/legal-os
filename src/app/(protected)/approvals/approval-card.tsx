@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import {
   ACTION_TYPE_LABELS,
   ACTION_TYPE_BADGE_CLASSES,
+  ACTION_TYPE_RIBBON_CLASSES,
 } from "@/lib/approval-labels";
 import { formatRelativeTime, getSlaUrgency } from "@/lib/format";
 import { approveItem } from "./actions";
@@ -52,11 +53,23 @@ export function ApprovalCard({ item }: ApprovalCardProps) {
     <button
       onClick={handleClick}
       className={`
-        group w-full rounded-lg border bg-card p-4 text-left transition-all duration-150
-        ring-1 ring-foreground/10 hover:ring-foreground/20 hover:shadow-sm
-        ${isSelected ? "ring-primary/40 shadow-sm" : ""}
+        group relative w-full overflow-hidden rounded-lg border bg-card p-4 pl-5 text-left
+        ring-1 ring-foreground/10 transition-all duration-200 ease-out
+        hover:-translate-y-px hover:shadow-md hover:shadow-foreground/5 hover:ring-foreground/20
+        ${isSelected ? "ring-primary/50 shadow-md shadow-primary/5" : ""}
       `}
     >
+      {/* Action-type ribbon — left-edge gradient strip, color-coded. */}
+      <span
+        aria-hidden
+        className={`
+          absolute inset-y-0 left-0 w-1
+          ${ACTION_TYPE_RIBBON_CLASSES[item.action_type]}
+          ${isSelected ? "opacity-100" : "opacity-70 group-hover:opacity-100"}
+          transition-opacity duration-200
+        `}
+      />
+
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
@@ -66,10 +79,12 @@ export function ApprovalCard({ item }: ApprovalCardProps) {
             >
               {ACTION_TYPE_LABELS[item.action_type]}
             </Badge>
-            <span
-              className={`h-2 w-2 rounded-full ${SLA_DOT_CLASSES[urgency]}`}
-              title={urgency !== "none" ? `SLA: ${urgency}` : undefined}
-            />
+            {urgency !== "none" && (
+              <span
+                className={`h-2 w-2 rounded-full ${SLA_DOT_CLASSES[urgency]}`}
+                title={`SLA: ${urgency}`}
+              />
+            )}
           </div>
 
           {item.entity_summary && (
@@ -88,7 +103,10 @@ export function ApprovalCard({ item }: ApprovalCardProps) {
         <Button
           variant="outline"
           size="sm"
-          className="shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
+          className="
+            shrink-0 -translate-x-1 opacity-0 transition-all duration-200
+            group-hover:translate-x-0 group-hover:opacity-100
+          "
           onClick={handleQuickApprove}
           disabled={isPending}
         >

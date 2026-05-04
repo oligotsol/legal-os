@@ -14,16 +14,16 @@ const MODEL_PRICING: Record<string, ModelPricing> = {
   // Haiku 4.5
   "claude-haiku-4-5-20251001": { inputPer1M: 0.80, outputPer1M: 4.00 },
   // Sonnet 4.6
-  "claude-sonnet-4-6-20250514": { inputPer1M: 3.00, outputPer1M: 15.00 },
-  // Opus 4.6
-  "claude-opus-4-6-20250610": { inputPer1M: 15.00, outputPer1M: 75.00 },
+  "claude-sonnet-4-6": { inputPer1M: 3.00, outputPer1M: 15.00 },
+  // Opus 4.7
+  "claude-opus-4-7": { inputPer1M: 15.00, outputPer1M: 75.00 },
 };
 
 /** Short aliases → canonical model IDs */
 const MODEL_ALIASES: Record<string, string> = {
   haiku: "claude-haiku-4-5-20251001",
-  sonnet: "claude-sonnet-4-6-20250514",
-  opus: "claude-opus-4-6-20250610",
+  sonnet: "claude-sonnet-4-6",
+  opus: "claude-opus-4-7",
 };
 
 /**

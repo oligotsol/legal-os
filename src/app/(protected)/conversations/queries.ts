@@ -37,6 +37,15 @@ export interface ConversationThread {
   leadId: string | null;
   leadStatus: string | null;
   contactId: string | null;
+  /** Set when an AI draft is waiting on this conversation. Lets the
+   *  conversation panel render an inline approve/send affordance so the
+   *  attorney never has to context-switch to /approvals to dispatch a reply. */
+  pendingApproval: {
+    queueItemId: string;
+    messageId: string;
+    content: string;
+    channel: string | null;
+  } | null;
 }
 
 export interface ThreadMessage {
@@ -217,6 +226,32 @@ export async function fetchConversationThread(
     leadStatus = (leadRow?.status as string) ?? null;
   }
 
+  // Resolve pending approval for the most recent AI draft, if any.
+  let pendingApproval: ConversationThread["pendingApproval"] = null;
+  const pendingMsg = (messages ?? [])
+    .slice()
+    .reverse()
+    .find(
+      (m) => m.status === "pending_approval" && m.ai_generated === true,
+    );
+  if (pendingMsg) {
+    const { data: q } = await supabase
+      .from("approval_queue")
+      .select("id")
+      .eq("entity_id", pendingMsg.id)
+      .eq("entity_type", "message")
+      .eq("status", "pending")
+      .maybeSingle();
+    if (q) {
+      pendingApproval = {
+        queueItemId: q.id,
+        messageId: pendingMsg.id,
+        content: (pendingMsg.content as string) ?? "",
+        channel: (pendingMsg.channel as string) ?? null,
+      };
+    }
+  }
+
   return {
     id: conversation.id,
     contactName: contact?.full_name ?? "Unknown Contact",
@@ -243,5 +278,6 @@ export async function fetchConversationThread(
     leadId: conversation.lead_id ?? null,
     leadStatus,
     contactId: conversation.contact_id ?? null,
+    pendingApproval,
   };
 }

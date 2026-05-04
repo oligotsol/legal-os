@@ -31,9 +31,9 @@ yarn-error.log*
 # env files
 .env
 .env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env.*.local
+.env.local.*
+*.env.save
 # .env.example is committed (template only, no secrets)
 
 # vercel
@@ -51,4 +51,5 @@ next-env.d.ts
 .vscode/
 *.swp
 *.swo
+*.save
 supabase/.temp/

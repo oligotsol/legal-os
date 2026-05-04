@@ -70,14 +70,24 @@ export async function generateDraftReply(
     .select("*")
     .eq("id", conversationId)
     .single();
-  if (!conversation) return;
+  if (!conversation) {
+    console.error(
+      `[generateDraftReply] conversation not found: firmId=${firmId} conversationId=${conversationId}`,
+    );
+    return;
+  }
 
   const { data: contact } = await admin
     .from("contacts")
     .select("*")
     .eq("id", contactId)
     .single();
-  if (!contact) return;
+  if (!contact) {
+    console.error(
+      `[generateDraftReply] contact not found: firmId=${firmId} contactId=${contactId}`,
+    );
+    return;
+  }
 
   const { data: messageRows } = await admin
     .from("messages")
@@ -294,6 +304,19 @@ export async function generateDraftReply(
       });
     }
   } catch (err) {
-    console.error("Failed to generate AI draft reply:", err);
+    const errMessage = err instanceof Error ? err.message : String(err);
+    console.error(
+      `[generateDraftReply] failed: firmId=${firmId} conversationId=${conversationId} err=${errMessage}`,
+    );
+    await admin.from("ai_jobs").insert({
+      firm_id: firmId,
+      model: (convConfig.model as string) ?? "sonnet",
+      purpose: "converse",
+      entity_type: "conversation",
+      entity_id: conversationId,
+      status: "failed",
+      error: errMessage.slice(0, 2000),
+      privileged: false,
+    });
   }
 }
