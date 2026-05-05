@@ -124,7 +124,7 @@ export async function processInboundMessage(
   let leadId: string | null = null;
   let firmId: string;
   let isNewLead = false;
-  let contactState: string | null = contact?.state ?? null;
+  const contactState: string | null = contact?.state ?? null;
 
   if (contact) {
     contactId = contact.id;

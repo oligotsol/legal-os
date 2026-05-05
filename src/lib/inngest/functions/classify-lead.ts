@@ -16,7 +16,7 @@ export const classifyLeadWorker = inngest.createFunction(
     retries: 2,
     triggers: [{ event: "lead.created" }],
   },
-  async ({ event, step }: { event: { data: { firmId: string; leadId: string } }; step: any }) => {
+  async ({ event, step }) => {
     const { firmId, leadId } = event.data;
 
     const admin = createAdminClient();

@@ -107,7 +107,7 @@ export async function fetchConversations(
   // Fetch last message preview for each conversation
   const conversationIds = conversations.map((c) => c.id);
 
-  let messageMap: Record<string, string> = {};
+  const messageMap: Record<string, string> = {};
 
   if (conversationIds.length > 0) {
     // Fetch the most recent message for each conversation.
