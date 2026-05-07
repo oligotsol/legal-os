@@ -76,13 +76,44 @@ export async function POST(request: Request) {
 
   const firmIds = integrations.map((i) => i.firm_id);
 
+  // Defensive: Dialpad sometimes delivers SMS notifications without the
+  // text body when the subscription's `message_content_export` scope is
+  // off. Persist the inbound row for audit but skip AI generation —
+  // there's nothing to converse with. Surface the gap clearly via the
+  // webhook_events.error column so it's diagnosable later.
+  const messageText = (evt.text ?? "").trim();
+  if (!messageText) {
+    await processInboundMessage({
+      admin,
+      candidateFirmIds: firmIds,
+      channel: "sms",
+      fromIdentifier: evt.from_number,
+      body: "(no text in webhook payload — Dialpad scope likely missing)",
+      externalMessageId: evt.id ? evtIdStr : null,
+      source: "dialpad",
+      rawPayload: { inbound_text: evt.text, created_date: evt.created_date, empty_body: true },
+      skipDraftReply: true,
+    });
+    await markWebhookEvent(
+      admin,
+      idempotencyKey,
+      "processed",
+      "Empty message body — Dialpad subscription may be missing message_content_export scope. Skipped AI draft.",
+    );
+    return NextResponse.json({
+      received: true,
+      processed: true,
+      warning: "empty body — no AI draft generated",
+    });
+  }
+
   try {
     const result = await processInboundMessage({
       admin,
       candidateFirmIds: firmIds,
       channel: "sms",
       fromIdentifier: evt.from_number,
-      body: evt.text ?? "",
+      body: messageText,
       externalMessageId: evt.id ? evtIdStr : null,
       source: "dialpad",
       rawPayload: { inbound_text: evt.text, created_date: evt.created_date },

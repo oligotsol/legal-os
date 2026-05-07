@@ -104,24 +104,26 @@ export async function fetchConversations(
 
   const conversations = data ?? [];
 
-  // Fetch last message preview for each conversation
+  // Fetch last message preview + actual message counts for each conversation.
+  // We compute counts here rather than reading conversations.message_count
+  // because that column isn't kept in sync — all paths that insert messages
+  // would have to remember to bump it. Computing on the fly is bulletproof.
   const conversationIds = conversations.map((c) => c.id);
 
   const messageMap: Record<string, string> = {};
+  const countMap: Record<string, number> = {};
 
   if (conversationIds.length > 0) {
-    // Fetch the most recent message for each conversation.
-    // Supabase doesn't support window functions directly, so we fetch
-    // the most recent messages and group them client-side.
     const { data: messages } = await supabase
       .from("messages")
       .select("conversation_id, content")
       .in("conversation_id", conversationIds)
-      .order("created_at", { ascending: false })
-      .limit(conversationIds.length * 2); // fetch enough to cover all convos
+      .order("created_at", { ascending: false });
 
     if (messages) {
       for (const msg of messages) {
+        countMap[msg.conversation_id] =
+          (countMap[msg.conversation_id] ?? 0) + 1;
         if (!messageMap[msg.conversation_id] && msg.content) {
           messageMap[msg.conversation_id] = msg.content;
         }
@@ -146,7 +148,7 @@ export async function fetchConversations(
       status: c.status,
       phase: c.phase,
       lastMessageAt: c.last_message_at,
-      messageCount: c.message_count ?? 0,
+      messageCount: countMap[c.id] ?? 0,
       lastMessagePreview: preview ? truncate(preview, 100) : null,
       hasEthicsFlags: hasEthicsSignals(c.context),
     };
@@ -261,7 +263,7 @@ export async function fetchConversationThread(
     channel: conversation.channel,
     status: conversation.status,
     phase: conversation.phase,
-    messageCount: conversation.message_count ?? 0,
+    messageCount: messages?.length ?? 0,
     context: conversation.context,
     messages: (messages ?? []).map((m) => ({
       id: m.id,
