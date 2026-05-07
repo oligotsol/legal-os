@@ -140,6 +140,15 @@ export async function converse(
     );
   }
 
+  // Post-output scrub — defense-in-depth against banned punctuation that the
+  // AI sometimes uses despite the prompt rule. Em-dashes and en-dashes are
+  // banned per Garrison's stated rule. The prompt asks the model to avoid
+  // them; this scrub guarantees the wire output never contains them.
+  validated = {
+    ...validated,
+    reply: scrubBannedPunctuation(validated.reply),
+  };
+
   return {
     response: validated,
     inputTokens,
@@ -148,6 +157,20 @@ export async function converse(
     latencyMs,
     model: resolvedModel,
   };
+}
+
+function scrubBannedPunctuation(text: string): string {
+  // Replace em (U+2014) and en (U+2013) dashes with a period + space when
+  // they sit between sentences ("X — Y"), or with a hyphen when they're
+  // mid-word/compound. Heuristic: spaces around → sentence break; otherwise
+  // hyphen. Capitalize the first letter after a sentence-break replacement
+  // so we don't end up with ". it's a..." artifacts. Collapse any
+  // double-spacing afterward.
+  return text
+    .replace(/\s+[—–]\s+(\p{Ll})/gu, (_m, ch: string) => ". " + ch.toUpperCase())
+    .replace(/\s+[—–]\s+/g, ". ")
+    .replace(/[—–]/g, "-")
+    .replace(/  +/g, " ");
 }
 
 function stripJsonFence(text: string): string {

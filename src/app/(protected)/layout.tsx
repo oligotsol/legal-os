@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { Sidebar } from "@/components/shell/sidebar";
+import { MobileNav } from "@/components/shell/mobile-nav";
 import type { UserRole } from "@/types/database";
 
 const MFA_REQUIRED_ROLES: UserRole[] = [
@@ -75,7 +76,17 @@ export default async function ProtectedLayout({
         pendingApprovalCount={pendingApprovalCount ?? 0}
         collapsed={collapsed}
       />
-      <main className="flex-1 overflow-y-auto">{children}</main>
+      <main className="flex flex-1 flex-col overflow-y-auto">
+        {/* Mobile-only top bar with hamburger; hidden at md+ where the
+            desktop sidebar takes over. */}
+        <MobileNav
+          firmName={firmName}
+          userEmail={user.email ?? ""}
+          userFullName={profile?.full_name ?? null}
+          pendingApprovalCount={pendingApprovalCount ?? 0}
+        />
+        {children}
+      </main>
     </div>
   );
 }

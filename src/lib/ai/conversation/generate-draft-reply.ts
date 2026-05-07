@@ -48,6 +48,7 @@ export async function generateDraftReply(
     "qualification_config",
     "negotiation_config",
     "scheduling_config",
+    "firm_scope",
   ];
 
   const { data: configs } = await admin
@@ -64,6 +65,7 @@ export async function generateDraftReply(
   const qualConfig = configMap.qualification_config ?? {};
   const negConfig = configMap.negotiation_config ?? {};
   const schedConfig = configMap.scheduling_config ?? {};
+  const firmScope = configMap.firm_scope ?? null;
 
   const { data: conversation } = await admin
     .from("conversations")
@@ -103,17 +105,38 @@ export async function generateDraftReply(
     channel: m.channel,
   }));
 
+  // Business-identity fields are required — never silently fall back to a
+  // hardcoded firm name. A missing config row means the firm wasn't fully
+  // onboarded; failing fast surfaces that immediately rather than letting
+  // the AI sign messages "Legacy First Law" for the wrong tenant.
+  const firmName = negConfig.firm_name as string | undefined;
+  const attorneyName = negConfig.attorney_name as string | undefined;
+  if (!firmName || !attorneyName) {
+    throw new Error(
+      `Firm ${firmId} is missing required negotiation_config keys (firm_name, attorney_name). Configure firm_config before drafting AI replies.`,
+    );
+  }
+
+  // Technical defaults below are not business rules — they're sane wire
+  // settings (token limits, temperature, char caps). The opinion-shaped
+  // ones (tone, turnaround, model alias, casualness, escalation target)
+  // remain inlined for now but should move to a vertical_defaults table
+  // so a roofing tenant gets roofing defaults without code changes. See
+  // CLAUDE.md non-negotiable #7.
   const converseConfig: ConversationConfig = {
+    // TODO(vertical_defaults): source from vertical_defaults table.
     model: (convConfig.model as string) ?? "sonnet",
     maxTokens: (convConfig.max_tokens as number) ?? 1024,
     temperature: (convConfig.temperature as number) ?? 0.7,
-    firmName: (negConfig.firm_name as string) ?? "Legacy First Law PLLC",
-    attorneyName: (negConfig.attorney_name as string) ?? "Garrison English",
+    firmName,
+    attorneyName,
+    // TODO(vertical_defaults): source from vertical_defaults table.
     tone: (negConfig.tone as string) ?? "Professional and warm",
     keyPhrases: (negConfig.key_phrases as string[]) ?? [],
     competitiveAdvantages:
       (negConfig.competitive_advantages as string[]) ?? [],
     paymentOptions: (negConfig.payment_options as string[]) ?? [],
+    // TODO(vertical_defaults): source from vertical_defaults table.
     turnaround: (negConfig.turnaround as string) ?? "7 business days",
     disqualifyRules: (negConfig.disqualify_rules as string[]) ?? [],
     referralRules: (negConfig.referral_rules as string[]) ?? [],
@@ -127,6 +150,7 @@ export async function generateDraftReply(
       escalationDelayHours:
         ((qualConfig.escalation_rules as Record<string, unknown>)
           ?.escalation_delay_hours as number) ?? 48,
+      // TODO(vertical_defaults): "attorney" is law-specific. Roofing should default to "owner" or "estimator".
       escalationTarget:
         ((qualConfig.escalation_rules as Record<string, unknown>)
           ?.escalation_target as string) ?? "attorney",
@@ -141,10 +165,37 @@ export async function generateDraftReply(
         { sms: string; email: string }
       >) ?? {},
     phoneNumber: (convConfig.phone_number as string) ?? "",
-    firmFullName:
-      (convConfig.firm_full_name as string) ??
-      (negConfig.firm_name as string) ??
-      "Legacy First Law PLLC",
+    firmFullName: (convConfig.firm_full_name as string) ?? firmName,
+    // Intake-closer doctrine fields (per docs/voice/). When
+    // closer_doctrine_enabled is true, the prompt builder swaps to the
+    // intake-closer master doctrine (phone-first deliberately omitted —
+    // call infra not built).
+    closerDoctrineEnabled:
+      (convConfig.closer_doctrine_enabled as boolean) ?? false,
+    intakeSpecialistName:
+      (convConfig.intake_specialist_name as string) ?? undefined,
+    preferredPhrases: (convConfig.preferred_phrases as string[]) ?? [],
+    quoteImmediately: (convConfig.quote_immediately as boolean) ?? false,
+    useWePronoun: (negConfig.use_we_pronoun as boolean) ?? false,
+    persona:
+      (negConfig.persona as "intake_staff" | "attorney_personal" | undefined) ??
+      undefined,
+    firmScope: firmScope
+      ? {
+          activePracticeAreas:
+            ((firmScope as Record<string, unknown>).active_practice_areas as
+              | string[]
+              | undefined) ?? [],
+          activeStates:
+            ((firmScope as Record<string, unknown>).active_states as
+              | string[]
+              | undefined) ?? [],
+          redirects:
+            ((firmScope as Record<string, unknown>).redirects as
+              | Record<string, string>
+              | undefined) ?? {},
+        }
+      : undefined,
   };
 
   const converseContext: ConversationContext = {
@@ -170,14 +221,32 @@ export async function generateDraftReply(
       newMessageContent,
     );
 
+    // Sign-off enforcement — the AI sometimes drops the sign-off when
+    // squeezing under SMS char limits. Code-level enforcement: if the
+    // reply doesn't already end with the configured sign-off for this
+    // firm + state + channel, append it. The prompt also asks for it,
+    // but the post-processing here makes it bulletproof.
+    const sentChannel = result.response.suggested_channel;
+    const stateKey = contact.state ?? "";
+    const signOffMap = converseConfig.perJurisdictionSignOffs;
+    const signOffEntry =
+      signOffMap[stateKey] ?? Object.values(signOffMap)[0] ?? null;
+    const expectedSignOff =
+      signOffEntry &&
+      (sentChannel === "sms" ? signOffEntry.sms : signOffEntry.email);
+    let finalReply = result.response.reply;
+    if (expectedSignOff && !finalReply.includes(expectedSignOff)) {
+      finalReply = finalReply.trimEnd() + "\n\n" + expectedSignOff;
+    }
+
     const { data: draftMsg, error: draftErr } = await admin
       .from("messages")
       .insert({
         firm_id: firmId,
         conversation_id: conversationId,
         direction: "outbound",
-        channel: result.response.suggested_channel,
-        content: result.response.reply,
+        channel: sentChannel,
+        content: finalReply,
         sender_type: "ai",
         status: "pending_approval",
         ai_generated: true,

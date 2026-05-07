@@ -47,7 +47,11 @@ export interface ProcessInboundInput {
   source: string;
   /** Anything provider-specific to retain on the lead row for debugging. */
   rawPayload?: Record<string, unknown>;
-  /** Defaults to a TX-centric set of jurisdictions / thresholds. */
+  /**
+   * Optional override. If omitted, ethics config is loaded from
+   * `firm_config.ethics_config` for the resolved firm. Per CLAUDE.md
+   * non-negotiable #7: business rules are configuration, not hardcoded.
+   */
   ethicsConfig?: EthicsScanConfig;
   /** Email subject for thread context — passed to AI draft generator for Re: lines. */
   subjectHint?: string | null;
@@ -78,11 +82,37 @@ export interface ProcessInboundResult {
   ethicsRecommendedAction?: string | null;
 }
 
-const DEFAULT_ETHICS_CONFIG: EthicsScanConfig = {
-  activeJurisdictions: ["TX", "IA", "ND", "PA", "NJ"],
+/**
+ * Last-resort fallback used only when neither the caller nor the firm
+ * has any ethics config set. Kept narrow on purpose — a real firm
+ * onboarding should always populate `firm_config.ethics_config`. This
+ * avoids the AI ever running without *some* compliance scanning if a
+ * row is missing during a config-loader race.
+ */
+const FALLBACK_ETHICS_CONFIG: EthicsScanConfig = {
+  activeJurisdictions: [],
   beebeGrandfatherActive: false,
-  highValueThreshold: 250000,
+  highValueThreshold: 0,
 };
+
+async function loadEthicsConfigForFirm(
+  admin: AdminClient,
+  firmId: string,
+): Promise<EthicsScanConfig> {
+  const { data } = await admin
+    .from("firm_config")
+    .select("value")
+    .eq("firm_id", firmId)
+    .eq("key", "ethics_config")
+    .maybeSingle();
+  if (!data?.value) {
+    console.warn(
+      `[processInboundMessage] no ethics_config row for firm ${firmId} — falling back to permissive defaults. Configure firm_config.ethics_config to enable jurisdiction/threshold checks.`,
+    );
+    return FALLBACK_ETHICS_CONFIG;
+  }
+  return data.value as EthicsScanConfig;
+}
 
 export async function processInboundMessage(
   input: ProcessInboundInput,
@@ -97,7 +127,7 @@ export async function processInboundMessage(
     externalMessageId,
     source,
     rawPayload,
-    ethicsConfig = DEFAULT_ETHICS_CONFIG,
+    ethicsConfig: ethicsConfigOverride,
     subjectHint,
     skipDraftReply = false,
   } = input;
@@ -244,8 +274,12 @@ export async function processInboundMessage(
     .eq("id", conversationId);
 
   // -------------------------------------------------------------------
-  // Ethics scan
+  // Ethics scan — config is firm-specific, loaded from firm_config.
+  // (CLAUDE.md non-negotiable #7: business rules are configuration.)
   // -------------------------------------------------------------------
+  const ethicsConfig =
+    ethicsConfigOverride ?? (await loadEthicsConfigForFirm(admin, firmId));
+
   const scanResult = scanMessage(
     {
       messageContent: body,

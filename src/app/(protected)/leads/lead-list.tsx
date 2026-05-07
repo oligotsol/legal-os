@@ -37,8 +37,8 @@ export function LeadList({ leads }: LeadListProps) {
   }
 
   return (
-    <div className="animate-rise-in overflow-hidden rounded-lg border bg-card shadow-sm shadow-foreground/5">
-      <table className="w-full text-sm">
+    <div className="animate-rise-in overflow-x-auto rounded-lg border bg-card shadow-sm shadow-foreground/5">
+      <table className="w-full min-w-[640px] text-sm">
         <thead>
           <tr className="border-b bg-gradient-to-b from-muted/60 to-muted/30">
             <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">Name</th>

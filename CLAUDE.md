@@ -30,6 +30,7 @@ Before doing any real work, read these:
 - `/docs/01_ARCHITECTURE.md` — technical blueprint, data model, AI abstraction, security model
 - `/docs/02_SPRINT_PLAN.md` — week-by-week plan with slip strategy
 - `/docs/03_GARRISON_SESSION.md` — the business logic extraction (contents populated as the firm owner is interviewed)
+- `/docs/voice/README.md` — Garrison's tone & doctrine source material (intake-closer prompts, MVQ, pricing, output format). **Read this before any change to AI conversation behavior.** Contains 5 unresolved doctrine conflicts that block applying the new prompt — surface them before applying.
 
 Decisions in these docs are not hypotheticals. They were argued out. If you think a decision is wrong, raise it explicitly — don't silently override it.
 
@@ -94,8 +95,70 @@ This project will grow beyond estate planning. Core code should never reference 
 
 Core types: `Lead`, `Matter`, `PipelineStage`, `FeeQuote`, `Conversation` — not `EstatePlanningMatter`.
 
-### 7. Scope discipline
+### 7. Configuration over hardcoding
+**Anytime you're about to write a string literal that's a business rule, prompt, template, pipeline stage, or anything that varies per tenant or per vertical — stop. Store it as a database record instead.** Code reads configuration; code does not embody it.
+
+Things that MUST live in the database, never in code:
+- AI system prompts (qualification scripts, voice agent prompts)
+- Pipeline stages and their order
+- Email/SMS/drip templates (subject lines + bodies)
+- Document templates (engagement letters, retainer agreements, fee quotes)
+- Tone, banned phrases, key phrases, sign-offs
+- Pricing tiers, service offerings, payment options
+- Notification rules, approval modes, escalation thresholds
+- Ethics scan rules (active jurisdictions, value thresholds, jurisdictional flags)
+- Custom field definitions per object
+- Ad copy, intake form questions, voice qualification scripts (when those land)
+
+Things that live in code:
+- Core CRUD and AI engine wiring
+- Auth, billing, integration adapters
+- The configuration loader itself
+- UI components that *read* configuration
+
+If you find yourself adding a default fallback like `?? "Legacy First Law PLLC"` or `?? ["TX","IA","ND"]` to a function, you're hardcoding a business rule. Either the firm_config row should be required (throw if missing during onboarding) or the default should be vertical-default driven from a `vertical_defaults` table — not inlined.
+
+Discipline test: a new firm should be onboardable as a row in `firms` plus rows in `firm_config` plus seed runs. Zero code changes. If onboarding requires editing TypeScript, the configuration system has a hole.
+
+### 8. Soft-delete customer data, never hard-delete
+Customer-data tables (`leads`, `contacts`, `conversations`, `messages`, `matters`) have a `deleted_at TIMESTAMPTZ` column. Use the `softDelete()` helper in `src/lib/soft-delete.ts`. Never `.delete()` from supabase-js on these tables in product code.
+
+**Why:** in legal context, even a stale row may be discoverable evidence. Hard deletes destroy audit history. Compliance + malpractice exposure prefers a soft-delete + retention policy over irreversible loss.
+
+**Reads must filter** `deleted_at IS NULL` going forward. Existing read queries pre-date this rule and will be migrated as we add the first user-facing delete affordance. A "trash" / archive view that intentionally shows soft-deleted rows is fine — be explicit about it.
+
+**Diagnostic / dev scripts** that need to clean test rows can hard-delete; that's not the app surface.
+
+### 9. Scope discipline
 If something belongs in v2 (document generation, triple-verify, delivery, post-delivery), it belongs in v2. Don't slip it in "because it's quick." Flag it as a future task in the appropriate tracking doc.
+
+---
+
+## Vertical Architecture
+
+The platform is multi-vertical from the schema up. Two levels of segmentation:
+
+- **Vertical** (`firms.vertical`): top-level industry pack. Current: `legal`. Future: `roofing`, `medical`, `hvac`, `solar`, `liquidation`, etc.
+- **Sub-vertical** (`firms.sub_vertical`): specialization within the vertical. For legal: `estate_planning`, `family_law`, `ip`, `pi`, `business_transactional`. For roofing: `residential`, `commercial`. For medical: `dental`, `dermatology`, etc.
+
+### Rules
+
+1. Every firm has a `vertical` (NOT NULL, defaults to `legal` for backwards compat).
+2. Vertical-specific behavior — action types, compliance rules, intake forms, default templates, ethics scanners — must be vertical-driven, not law-assumed.
+3. Sub-vertical is a refinement *within* a vertical. An estate-planning firm and an IP firm share the legal compliance scanner but may have different default templates and pipeline stages.
+4. Adding a new vertical = (a) add config rows to a `vertical_defaults` table or seed script, (b) possibly add new vertical-specific UI components keyed off the vertical column. **Zero changes to core platform code.**
+5. If you write `if (vertical === 'legal')` in core code, you've created a fork. Pull that branch into configuration instead.
+
+### Today's vertical-aware surfaces (handle with care)
+
+These code paths still bake in legal assumptions and will need refactoring as we onboard non-legal verticals:
+
+- `approval_queue.action_type` CHECK constraint — hardcodes `engagement_letter`. Must be replaced with a vertical-driven action-type registry before a non-legal tenant onboards.
+- Ethics scanner (`src/lib/ai/ethics-scanner.ts`) — bar-rule / UPL / jurisdictional checks. Other verticals need different compliance scanners (HIPAA, building-code disclosures, etc.). Same shape, different rules.
+- Lawcus integration is law-specific by definition.
+- The `matters` and `engagement_letters` table names lean legal. Roofing equivalent is `projects` / `contracts`. Probably acceptable as-is — these can map at the vertical-template layer rather than be renamed.
+
+When you touch any of these, pause and ask: am I making this more vertical-aware, or am I making it more legal-locked? The first is good, the second is a foot-gun for the platform.
 
 ---
 

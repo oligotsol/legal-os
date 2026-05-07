@@ -38,7 +38,7 @@ export function Sidebar({
 }: SidebarProps) {
   return (
     <aside
-      className={`flex h-screen flex-col border-r border-sidebar-border bg-sidebar transition-[width] duration-200 ${collapsed ? "w-16" : "w-64"}`}
+      className={`hidden h-screen flex-col border-r border-sidebar-border bg-sidebar transition-[width] duration-200 md:flex ${collapsed ? "w-16" : "w-64"}`}
     >
       {/* Logo / Firm name */}
       <div className={`flex h-14 items-center gap-2.5 border-b border-sidebar-border ${collapsed ? "justify-center px-2" : "px-4"}`}>

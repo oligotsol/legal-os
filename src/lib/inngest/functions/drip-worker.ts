@@ -290,17 +290,27 @@ export const dripWorker = inngest.createFunction(
               });
             }
 
-            // Day 10 + no reply -> schedule lost_no_response transition
-            if (dripDay === 10) {
-              // This would trigger a transition — for now, we just log it
-              // The actual transition happens when the approval is processed or expires
+            // Final-step detection — was this the last drip in the campaign?
+            // We don't hardcode `dripDay === 10`; that was law-specific. Instead
+            // we check whether any later drip is still queued for this
+            // conversation. If none, treat this run as the final follow-up.
+            // Per CLAUDE.md non-negotiable #7: cadence is data, not code.
+            const { count: laterPending } = await admin
+              .from("scheduled_actions")
+              .select("id", { count: "exact", head: true })
+              .eq("conversation_id", conversationId)
+              .eq("status", "pending")
+              .gt("scheduled_for", action.scheduled_for);
+
+            const isFinalDrip = (laterPending ?? 0) === 0;
+            if (isFinalDrip) {
               await admin.from("audit_log").insert({
                 firm_id: action.firm_id,
                 action: "drip.final_followup",
                 entity_type: "conversation",
                 entity_id: conversationId,
                 metadata: {
-                  drip_day: 10,
+                  drip_day: dripDay,
                   next_action: "lost_no_response_if_no_reply",
                 },
               });
