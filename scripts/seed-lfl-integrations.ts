@@ -15,6 +15,9 @@
  *
  * DIALPAD_API_KEY must be passed as an env var — never committed to code.
  *
+ * Override the from-number without editing this file:
+ *   DIALPAD_FROM_NUMBER=+1xxxxxxxxxx DIALPAD_API_KEY=xxx npx tsx scripts/seed-lfl-integrations.ts
+ *
  * Idempotent — uses upsert on unique constraints (firm_id, provider)
  * and (firm_id, key).
  */
@@ -110,12 +113,15 @@ async function main() {
   //    Garrison has 9 lines — set a placeholder until he sends the list.
   //    The dispatch layer reads: firm_config[dialpad_from_number].value
   // -------------------------------------------------------------------
+  const dialpadFromNumber =
+    process.env.DIALPAD_FROM_NUMBER ?? "+12106107440";
+
   const { error: fromNumErr } = await supabase.from("firm_config").upsert(
     {
       firm_id: LFL_FIRM_ID,
       key: "dialpad_from_number",
       value: {
-        value: "+12104047175",
+        value: dialpadFromNumber,
       },
     },
     { onConflict: "firm_id,key" }
@@ -125,7 +131,7 @@ async function main() {
     console.error("Failed to seed dialpad_from_number:", fromNumErr.message);
     process.exit(1);
   }
-  console.log("3. firm_config: dialpad_from_number — +12104047175");
+  console.log(`3. firm_config: dialpad_from_number — ${dialpadFromNumber}`);
 
   // -------------------------------------------------------------------
   // 4. firm_config: gmail_from_address
