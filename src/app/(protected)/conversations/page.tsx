@@ -3,12 +3,11 @@ import { PageHeader } from "@/components/shell/page-header";
 import { createClient } from "@/lib/supabase/server";
 import { ConversationFilters } from "./conversation-filters";
 import { ConversationList } from "./conversation-list";
-import { ConversationDetailSheet } from "./conversation-detail-sheet";
-import { fetchConversations, fetchConversationThread } from "./queries";
+import { fetchConversations } from "./queries";
 import type { ConversationStatus } from "@/types/database";
 
 interface ConversationsPageProps {
-  searchParams: Promise<{ status?: string; id?: string }>;
+  searchParams: Promise<{ status?: string }>;
 }
 
 export default async function ConversationsPage({
@@ -16,20 +15,19 @@ export default async function ConversationsPage({
 }: ConversationsPageProps) {
   const params = await searchParams;
   const statusFilter = params.status as ConversationStatus | undefined;
-  const selectedId = params.id;
 
   const supabase = await createClient();
 
-  const [conversations, thread] = await Promise.all([
-    fetchConversations(supabase, statusFilter ? { status: statusFilter } : undefined),
-    selectedId ? fetchConversationThread(supabase, selectedId) : null,
-  ]);
+  const conversations = await fetchConversations(
+    supabase,
+    statusFilter ? { status: statusFilter } : undefined,
+  );
 
   return (
     <>
       <PageHeader
         title="Conversations"
-        description="View and manage lead conversations"
+        description="Click a conversation to open the lead it belongs to."
       />
       <div className="p-6">
         <div className="mb-6">
@@ -39,9 +37,6 @@ export default async function ConversationsPage({
         </div>
         <ConversationList conversations={conversations} />
       </div>
-      {selectedId && thread && (
-        <ConversationDetailSheet thread={thread} />
-      )}
     </>
   );
 }

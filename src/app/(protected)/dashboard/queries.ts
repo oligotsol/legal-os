@@ -62,6 +62,51 @@ export interface ApprovalSummary {
   count: number;
 }
 
+export interface DialerFunnelWindow {
+  /** Calls Garrison kicked off via the dialer. */
+  callsPlaced: number;
+  /** Calls he marked Connected (whether or not a matter was created). */
+  connected: number;
+  /** Leads that turned into a matter — counted by lead.converted_to_matter audit
+   *  entries so we capture conversions whether they happened inline from the
+   *  dialer or from /leads/[id] afterward. */
+  matters: number;
+  /** No-answer cadence triggers — proxy for "rang but didn't pick up". */
+  noAnswers: number;
+}
+
+export interface DialerFunnel {
+  today: DialerFunnelWindow;
+  last7d: DialerFunnelWindow;
+  last30d: DialerFunnelWindow;
+  /** Rates derived from today's numbers. Null when divisor is 0. */
+  todayRates: {
+    connectRate: number | null; // connected / calls_placed
+    convertRate: number | null; // matters / connected
+    callToMatterRate: number | null; // matters / calls_placed
+  };
+}
+
+export interface FreshReply {
+  approvalQueueId: string;
+  messageId: string;
+  leadId: string | null;
+  contactName: string;
+  channel: "sms" | "email";
+  /** What the prospect said (latest inbound on this conversation, capped). */
+  inboundPreview: string | null;
+  inboundAt: string | null;
+  /** Preview of the AI draft that's waiting on Garrison. */
+  draftPreview: string;
+  approvalCreatedAt: string;
+  /** Lead score tier ("hot" | "warm" etc.) — null when unscored. */
+  leadScoreTier: "hot" | "warm" | "cool" | "cold" | "unknown" | null;
+  /** Heuristic high-intent words detected in the inbound. */
+  highIntent: boolean;
+  /** Concrete signals lifted from the inbound for the UI to surface. */
+  highIntentMatches: string[];
+}
+
 // ---------------------------------------------------------------------------
 // Queries
 // ---------------------------------------------------------------------------
@@ -298,4 +343,314 @@ export async function fetchApprovalSummary(
     actionType,
     count,
   }));
+}
+
+/**
+ * Dialer funnel: calls placed → connected → converted, across three rolling
+ * windows (today, 7d, 30d). Sourced from audit_log so we get historical
+ * accuracy without touching live state.
+ */
+export async function fetchDialerFunnel(
+  supabase: SupabaseClient,
+): Promise<DialerFunnel> {
+  const now = Date.now();
+  const since30 = new Date(now - 30 * 24 * 3600 * 1000).toISOString();
+  const startOfTodayUtc = new Date();
+  startOfTodayUtc.setUTCHours(0, 0, 0, 0);
+  const since7 = new Date(now - 7 * 24 * 3600 * 1000);
+
+  // Pull every relevant audit row in the last 30 days, then bucket in JS.
+  const { data, error } = await supabase
+    .from("audit_log")
+    .select("action, created_at")
+    .in("action", [
+      "power_dialer.call_initiated",
+      "power_dialer.connected",
+      "power_dialer.cadence_step",
+      "lead.converted_to_matter",
+    ])
+    .gte("created_at", since30)
+    .order("created_at", { ascending: false })
+    .limit(5000);
+
+  if (error || !data) {
+    const empty: DialerFunnelWindow = {
+      callsPlaced: 0,
+      connected: 0,
+      matters: 0,
+      noAnswers: 0,
+    };
+    return {
+      today: empty,
+      last7d: empty,
+      last30d: empty,
+      todayRates: {
+        connectRate: null,
+        convertRate: null,
+        callToMatterRate: null,
+      },
+    };
+  }
+
+  const blank = (): DialerFunnelWindow => ({
+    callsPlaced: 0,
+    connected: 0,
+    matters: 0,
+    noAnswers: 0,
+  });
+  const today = blank();
+  const last7d = blank();
+  const last30d = blank();
+
+  for (const row of data as Array<{ action: string; created_at: string }>) {
+    const ts = new Date(row.created_at).getTime();
+    const inToday = ts >= startOfTodayUtc.getTime();
+    const in7d = ts >= since7.getTime();
+    const bump = (w: DialerFunnelWindow) => {
+      if (row.action === "power_dialer.call_initiated") w.callsPlaced++;
+      else if (row.action === "power_dialer.connected") w.connected++;
+      else if (row.action === "lead.converted_to_matter") w.matters++;
+      else if (row.action === "power_dialer.cadence_step") w.noAnswers++;
+    };
+    bump(last30d);
+    if (in7d) bump(last7d);
+    if (inToday) bump(today);
+  }
+
+  function rate(n: number, d: number): number | null {
+    return d === 0 ? null : Math.round((n / d) * 100);
+  }
+
+  return {
+    today,
+    last7d,
+    last30d,
+    todayRates: {
+      connectRate: rate(today.connected, today.callsPlaced),
+      convertRate: rate(today.matters, today.connected),
+      callToMatterRate: rate(today.matters, today.callsPlaced),
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Fresh replies — fastest path to revenue is responding to inbound replies
+// quickly. This pulls every pending message-approval that was triggered by
+// an inbound reply (i.e. an AI draft sitting in the queue), enriches with
+// what the prospect actually said, their lead score, and any high-intent
+// keywords so Garrison can triage at a glance.
+// ---------------------------------------------------------------------------
+
+const HIGH_INTENT_PATTERNS: Array<{ regex: RegExp; label: string }> = [
+  { regex: /\byes\b/i, label: "yes" },
+  { regex: /\binterested\b/i, label: "interested" },
+  { regex: /\bready\b/i, label: "ready" },
+  { regex: /\blet'?s? (?:do|start|go|get) (?:it|this|going|started)\b/i, label: "let's go" },
+  { regex: /\bsend (?:it|me|the|over|that)\b/i, label: "send it" },
+  { regex: /\bsign (?:me )?up\b/i, label: "sign me up" },
+  { regex: /\bbook\b/i, label: "book" },
+  { regex: /\bschedul/i, label: "schedule" },
+  { regex: /\bcall me\b/i, label: "call me" },
+  { regex: /\bwhat'?s (?:next|the next)/i, label: "what's next" },
+  { regex: /\bhow do (?:i|we)\b/i, label: "how do I" },
+  { regex: /\bwhen can\b/i, label: "when can" },
+  { regex: /\bproceed\b/i, label: "proceed" },
+];
+
+function detectHighIntent(text: string | null): string[] {
+  if (!text) return [];
+  const matches: string[] = [];
+  for (const { regex, label } of HIGH_INTENT_PATTERNS) {
+    if (regex.test(text)) matches.push(label);
+    if (matches.length >= 3) break;
+  }
+  return matches;
+}
+
+export async function fetchFreshReplies(
+  supabase: SupabaseClient,
+  limit = 8,
+): Promise<FreshReply[]> {
+  // 1) Pull pending message-type approvals, newest first.
+  const { data: queueRows, error: qErr } = await supabase
+    .from("approval_queue")
+    .select("id, entity_id, action_type, metadata, created_at")
+    .eq("status", "pending")
+    .eq("entity_type", "message")
+    .order("created_at", { ascending: false })
+    .limit(limit * 3); // overfetch — some won't have matching inbound
+  if (qErr || !queueRows) return [];
+  if (queueRows.length === 0) return [];
+
+  type QRow = {
+    id: string;
+    entity_id: string;
+    action_type: string;
+    metadata: Record<string, unknown> | null;
+    created_at: string;
+  };
+  const rows = queueRows as QRow[];
+
+  // 2) Pull the draft messages they point to (we need conversation_id +
+  // body preview).
+  const messageIds = rows.map((r) => r.entity_id);
+  const { data: msgs } = await supabase
+    .from("messages")
+    .select("id, conversation_id, content, channel")
+    .in("id", messageIds);
+  const msgById = new Map<
+    string,
+    { conversation_id: string; content: string | null; channel: string | null }
+  >();
+  for (const m of (msgs ?? []) as Array<{
+    id: string;
+    conversation_id: string;
+    content: string | null;
+    channel: string | null;
+  }>) {
+    msgById.set(m.id, m);
+  }
+
+  // 3) Pull the latest inbound message on each of those conversations.
+  const conversationIds = Array.from(
+    new Set(
+      Array.from(msgById.values())
+        .map((m) => m.conversation_id)
+        .filter(Boolean),
+    ),
+  );
+  const { data: inbound } = await supabase
+    .from("messages")
+    .select("conversation_id, content, channel, created_at")
+    .in("conversation_id", conversationIds)
+    .eq("direction", "inbound")
+    .order("created_at", { ascending: false });
+  const latestInboundByConvo = new Map<
+    string,
+    { content: string; channel: string | null; created_at: string }
+  >();
+  for (const m of (inbound ?? []) as Array<{
+    conversation_id: string;
+    content: string | null;
+    channel: string | null;
+    created_at: string;
+  }>) {
+    if (latestInboundByConvo.has(m.conversation_id)) continue;
+    if (!m.content) continue;
+    latestInboundByConvo.set(m.conversation_id, {
+      content: m.content,
+      channel: m.channel,
+      created_at: m.created_at,
+    });
+  }
+
+  // 4) Pull conversations → lead_id → lead.payload.lead_score + contact.
+  const { data: convoRows } = await supabase
+    .from("conversations")
+    .select("id, lead_id, contact_id")
+    .in("id", conversationIds);
+  type ConvoRow = {
+    id: string;
+    lead_id: string | null;
+    contact_id: string | null;
+  };
+  const convoById = new Map<string, ConvoRow>();
+  for (const c of (convoRows ?? []) as ConvoRow[]) {
+    convoById.set(c.id, c);
+  }
+
+  const leadIds = Array.from(
+    new Set(
+      Array.from(convoById.values())
+        .map((c) => c.lead_id)
+        .filter((x): x is string => !!x),
+    ),
+  );
+  const { data: leadRows } =
+    leadIds.length > 0
+      ? await supabase
+          .from("leads")
+          .select("id, full_name, payload, contacts:contact_id(full_name)")
+          .in("id", leadIds)
+      : { data: [] };
+  type LeadRow = {
+    id: string;
+    full_name: string | null;
+    payload: Record<string, unknown> | null;
+    contacts: unknown;
+  };
+  const leadById = new Map<string, LeadRow>();
+  for (const l of (leadRows ?? []) as LeadRow[]) {
+    leadById.set(l.id, l);
+  }
+
+  // 5) Assemble + sort.
+  const replies: FreshReply[] = [];
+  for (const r of rows) {
+    const msg = msgById.get(r.entity_id);
+    if (!msg) continue;
+    const convo = convoById.get(msg.conversation_id);
+    const leadId = convo?.lead_id ?? null;
+    const lead = leadId ? leadById.get(leadId) : null;
+    const contact = lead
+      ? ((Array.isArray(lead.contacts)
+          ? lead.contacts[0]
+          : lead.contacts) as { full_name?: string | null } | null)
+      : null;
+    const contactName =
+      contact?.full_name ??
+      (lead?.full_name as string | null) ??
+      (r.metadata?.contact_name as string | undefined) ??
+      "Unknown";
+    const leadScore = lead?.payload?.lead_score as
+      | { tier?: FreshReply["leadScoreTier"] }
+      | undefined;
+    const inboundHit = latestInboundByConvo.get(msg.conversation_id) ?? null;
+    const matches = detectHighIntent(inboundHit?.content ?? null);
+    const channel: "sms" | "email" =
+      (msg.channel === "email" || msg.channel === "sms"
+        ? msg.channel
+        : (inboundHit?.channel === "email" ? "email" : "sms")) as
+        | "sms"
+        | "email";
+    replies.push({
+      approvalQueueId: r.id,
+      messageId: r.entity_id,
+      leadId,
+      contactName,
+      channel,
+      inboundPreview: inboundHit
+        ? inboundHit.content.length > 200
+          ? inboundHit.content.slice(0, 200) + "…"
+          : inboundHit.content
+        : null,
+      inboundAt: inboundHit?.created_at ?? null,
+      draftPreview:
+        (msg.content ?? "").length > 160
+          ? (msg.content ?? "").slice(0, 160) + "…"
+          : msg.content ?? "",
+      approvalCreatedAt: r.created_at,
+      leadScoreTier: leadScore?.tier ?? null,
+      highIntent: matches.length > 0,
+      highIntentMatches: matches,
+    });
+  }
+
+  // Sort: high-intent first → hot/warm tier → recency.
+  const tierWeight: Record<NonNullable<FreshReply["leadScoreTier"]>, number> = {
+    hot: 4,
+    warm: 3,
+    unknown: 2,
+    cool: 1,
+    cold: 0,
+  };
+  replies.sort((a, b) => {
+    if (a.highIntent !== b.highIntent) return a.highIntent ? -1 : 1;
+    const at = a.leadScoreTier ? tierWeight[a.leadScoreTier] : 2;
+    const bt = b.leadScoreTier ? tierWeight[b.leadScoreTier] : 2;
+    if (at !== bt) return bt - at;
+    return b.approvalCreatedAt.localeCompare(a.approvalCreatedAt);
+  });
+
+  return replies.slice(0, limit);
 }

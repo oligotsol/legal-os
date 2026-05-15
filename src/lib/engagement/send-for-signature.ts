@@ -2,7 +2,8 @@
  * Send an approved engagement letter for e-signature.
  *
  * Verifies the letter is in "approved" status (mandatory gate),
- * then calls the Dropbox Sign adapter (or dry run if no credentials).
+ * renders the snapshotted template + context to HTML, and ships the document
+ * to Dropbox Sign (or dry-runs when no integration is configured).
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -10,7 +11,10 @@ import {
   createSignatureRequest,
   createSignatureRequestDryRun,
 } from "@/lib/integrations/dropbox-sign/esign";
-import type { EngagementLetterVariables } from "./generate-letter";
+import {
+  renderLetterHtml,
+  type RenderLetterContext,
+} from "./render-letter";
 
 export interface SendForSignatureInput {
   firmId: string;
@@ -64,10 +68,15 @@ export async function sendEngagementForSignature(
     throw new Error("Contact email is required for e-signature");
   }
 
-  const variables = letter.variables as EngagementLetterVariables;
-
-  // 4. Build document content from variables
-  const documentContent = buildDocumentContent(variables);
+  // 4. Render the document from the snapshotted template + context
+  const template = letter.template_snapshot as string | null;
+  if (!template) {
+    throw new Error(
+      "Engagement letter has no template_snapshot; regenerate the letter to populate it",
+    );
+  }
+  const context = letter.variables as RenderLetterContext;
+  const documentContent = renderLetterHtml(template, context);
 
   // 5. Check for Dropbox Sign integration account
   const { data: integration } = await admin
@@ -81,8 +90,8 @@ export async function sendEngagementForSignature(
   const signatureInput = {
     signerEmail: contact.email,
     signerName: contact.full_name,
-    subject: `Engagement Letter - ${variables.firmName}`,
-    message: `Please review and sign the engagement letter for ${variables.matterType ?? "legal services"}.`,
+    subject: `Engagement Letter - ${context.firm_identity.legal_name}`,
+    message: `Please review and sign the engagement letter for ${context.practice_area ?? "legal services"}.`,
     title: `Engagement Letter - ${contact.full_name}`,
     documentContent,
     externalRef: engagementLetterId,
@@ -92,7 +101,6 @@ export async function sendEngagementForSignature(
   let dryRun: boolean;
 
   if (integration) {
-    // Real call
     const result = await createSignatureRequest(
       integration.credentials as Record<string, unknown>,
       signatureInput,
@@ -100,7 +108,6 @@ export async function sendEngagementForSignature(
     envelopeId = result.envelopeId;
     dryRun = false;
   } else {
-    // Dry run — no active integration
     const result = createSignatureRequestDryRun(signatureInput);
     envelopeId = result.envelopeId;
     dryRun = true;
@@ -140,80 +147,4 @@ export async function sendEngagementForSignature(
   });
 
   return { envelopeId, dryRun };
-}
-
-/**
- * Build a plain text document from engagement letter variables.
- * This is a simple text representation — full PDF rendering is v2.
- */
-function buildDocumentContent(variables: EngagementLetterVariables): string {
-  const lines: string[] = [
-    `ENGAGEMENT LETTER`,
-    ``,
-    `Date: ${variables.effectiveDate}`,
-    ``,
-    `${variables.firmName}`,
-    variables.attorneyName ? `Attorney: ${variables.attorneyName}` : "",
-    ``,
-    `Dear ${variables.clientName},`,
-    ``,
-    `This letter confirms the terms of our engagement to provide legal services.`,
-    ``,
-    `SCOPE OF SERVICES`,
-    `Matter Type: ${variables.matterType ?? "Legal Services"}`,
-    `Jurisdiction: ${variables.stateName} (${variables.stateCode})`,
-    ``,
-    `FEE SCHEDULE`,
-  ];
-
-  for (const item of variables.lineItems) {
-    lines.push(`  - ${item.serviceName}: $${item.amount.toFixed(2)}`);
-  }
-
-  lines.push(
-    ``,
-    `Total Fee: $${variables.totalFee.toFixed(2)}`,
-    ``,
-  );
-
-  if (variables.ioltaRule) {
-    lines.push(
-      `TRUST ACCOUNT`,
-      `${variables.ioltaRule}`,
-      `Account Type: ${variables.ioltaAccountType ?? "Trust"}`,
-      `Earning Method: ${variables.earningMethod ?? "N/A"}`,
-      ``,
-    );
-  }
-
-  if (variables.milestoneSplit && variables.milestoneSplit.length > 0) {
-    lines.push(
-      `PAYMENT MILESTONES`,
-      ...variables.milestoneSplit.map(
-        (pct, i) => `  Milestone ${i + 1}: ${pct}%`,
-      ),
-      ``,
-    );
-  }
-
-  if (variables.requiresInformedConsent) {
-    lines.push(
-      `INFORMED CONSENT`,
-      `Your jurisdiction requires informed consent for this engagement.`,
-      `By signing below, you acknowledge that you have been informed of and consent to the terms of this engagement.`,
-      ``,
-    );
-  }
-
-  lines.push(
-    `By signing below, you agree to the terms of this engagement letter.`,
-    ``,
-    `Client Signature: ___________________________`,
-    `Date: ___________________________`,
-    ``,
-    `${variables.firmName}`,
-    variables.attorneyName ?? "",
-  );
-
-  return lines.filter((l) => l !== undefined).join("\n");
 }

@@ -270,7 +270,7 @@ CREATE TABLE integration_accounts (
   provider      TEXT NOT NULL
                   CHECK (provider IN (
                     'dialpad', 'gmail', 'confido',
-                    'dropbox_sign', 'postmark', 'lawcus'
+                    'dropbox_sign', 'postmark'
                   )),
   credentials   JSONB NOT NULL DEFAULT '{}',
   status        TEXT NOT NULL DEFAULT 'active'

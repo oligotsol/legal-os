@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { convertLeadToMatter } from "@/lib/pipeline/convert-lead";
-import { getApprovalMode } from "@/lib/approval-mode";
+import { dispatchMessage } from "@/lib/dispatch/outbound";
 
 /**
  * Get the current user's ID and firm ID.
@@ -68,13 +68,30 @@ export async function convertLead(formData: FormData): Promise<string> {
   return result.matterId;
 }
 
+export interface SendMessageResult {
+  messageId: string;
+  status: "sent" | "failed";
+  sentAt: string | null;
+  externalId: string | null;
+  provider: string | null;
+  dryRun: boolean;
+  error?: string;
+}
+
 /**
- * Send an outbound message from the conversation detail sheet.
+ * Send an outbound message that the ATTORNEY typed in the composer.
  *
- * Creates a message with pending_approval status and an approval queue entry
- * (unless the firm is configured for auto_approve on messages).
+ * Per CLAUDE.md §3 the three hard approval gates are fee_quote /
+ * engagement_letter / invoice — plain outbound messages aren't one of them.
+ * When the attorney composes and clicks Send, dispatch immediately. AI
+ * drafts (from `generateDraftReply`) still go through the approval queue —
+ * that path is unchanged.
+ *
+ * Returns the dispatch result so the UI can render a "Sent ✓ at HH:MM"
+ * confirmation (or surface the failure reason) instead of the old
+ * "queued for approval" message.
  */
-export async function sendMessage(formData: FormData): Promise<string> {
+export async function sendMessage(formData: FormData): Promise<SendMessageResult> {
   const conversationId = formData.get("conversationId") as string;
   const content = (formData.get("content") as string)?.trim();
   const channel = formData.get("channel") as string;
@@ -89,10 +106,13 @@ export async function sendMessage(formData: FormData): Promise<string> {
   const { userId, firmId } = await getActorInfo();
   const admin = createAdminClient();
 
-  // Fetch conversation to verify ownership and get contact info
+  // Pull conversation + contact in one shot — we need the recipient address
+  // before we can dispatch.
   const { data: conversation, error: convErr } = await admin
     .from("conversations")
-    .select("id, firm_id, contact_id, contacts:contact_id(full_name)")
+    .select(
+      "id, firm_id, contact_id, contacts:contact_id(full_name, phone, email)",
+    )
     .eq("id", conversationId)
     .eq("firm_id", firmId)
     .single();
@@ -101,10 +121,47 @@ export async function sendMessage(formData: FormData): Promise<string> {
     throw new Error("Conversation not found");
   }
 
-  const approvalMode = await getApprovalMode(firmId, "message");
-  const status = approvalMode === "auto_approve" ? "approved" : "pending_approval";
+  const contactRaw = conversation.contacts as unknown;
+  const contact = (
+    Array.isArray(contactRaw) ? contactRaw[0] : contactRaw
+  ) as {
+    full_name: string | null;
+    phone: string | null;
+    email: string | null;
+  } | null;
 
-  // Insert message
+  const recipient = channel === "sms" ? contact?.phone : contact?.email;
+  if (!recipient) {
+    throw new Error(
+      `Contact has no ${channel === "sms" ? "phone number" : "email address"} on file.`,
+    );
+  }
+
+  // Resolve the firm's "from" identifier for this channel. Without it the
+  // adapter has no idea which Dialpad / Gmail account to send from.
+  const fromKey =
+    channel === "sms" ? "dialpad_from_number" : "gmail_from_address";
+  const { data: fromCfg } = await admin
+    .from("firm_config")
+    .select("value")
+    .eq("firm_id", firmId)
+    .eq("key", fromKey)
+    .maybeSingle();
+  const from =
+    ((fromCfg?.value as Record<string, unknown> | null)?.value as
+      | string
+      | undefined) ?? "";
+  if (!from) {
+    throw new Error(
+      `No ${channel === "sms" ? "phone number" : "email address"} configured for this firm to send from. ` +
+        `Add a firm_config row for "${fromKey}".`,
+    );
+  }
+
+  // Insert the message row in a pre-dispatch state ("approved" — already
+  // approved by the attorney via the act of clicking Send). We need a row
+  // ID before dispatch so we can store the external_id and audit-trail
+  // ties back to it correctly.
   const { data: message, error: msgErr } = await admin
     .from("messages")
     .insert({
@@ -116,7 +173,7 @@ export async function sendMessage(formData: FormData): Promise<string> {
       sender_type: "attorney",
       sender_id: userId,
       ai_generated: false,
-      status,
+      status: "approved",
       metadata: subject ? { subject } : null,
     })
     .select("id")
@@ -126,61 +183,100 @@ export async function sendMessage(formData: FormData): Promise<string> {
     throw new Error(`Failed to create message: ${msgErr?.message}`);
   }
 
-  // Update conversation timestamp
+  // Dispatch — this is the actual network call to Dialpad / Gmail.
+  let dispatchResult;
+  try {
+    dispatchResult = await dispatchMessage(firmId, {
+      channel,
+      to: recipient,
+      from,
+      body: content,
+      subject:
+        channel === "email"
+          ? subject ?? "Message from your attorney"
+          : undefined,
+      externalRef: message.id,
+    });
+  } catch (err) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    await admin
+      .from("messages")
+      .update({ status: "failed" })
+      .eq("id", message.id);
+    await admin.rpc("insert_audit_log", {
+      p_firm_id: firmId,
+      p_actor_id: userId,
+      p_action: "message.dispatch_failed",
+      p_entity_type: "message",
+      p_entity_id: message.id,
+      p_before: { status: "approved" },
+      p_after: {
+        status: "failed",
+        error: errMsg.slice(0, 1000),
+        sender: "attorney",
+        channel,
+      },
+      p_metadata: null,
+    });
+    revalidatePath("/conversations");
+    revalidatePath("/leads", "layout");
+    return {
+      messageId: message.id,
+      status: "failed",
+      sentAt: null,
+      externalId: null,
+      provider: null,
+      dryRun: false,
+      error: errMsg,
+    };
+  }
+
+  const sentAt = new Date().toISOString();
+  const externalId = dispatchResult.result.messageId ?? null;
+  const provider = dispatchResult.provider;
+
+  await admin
+    .from("messages")
+    .update({
+      status: "sent",
+      external_id: externalId,
+      sent_at: sentAt,
+    })
+    .eq("id", message.id);
+
   await admin
     .from("conversations")
-    .update({ last_message_at: new Date().toISOString() })
+    .update({ last_message_at: sentAt })
     .eq("id", conversationId)
     .eq("firm_id", firmId);
 
-  const contactRaw = conversation.contacts as unknown;
-  const contact = (Array.isArray(contactRaw) ? contactRaw[0] : contactRaw) as {
-    full_name: string;
-  } | null;
-  const contactName = contact?.full_name ?? "Unknown";
-
-  if (approvalMode === "always_review") {
-    // Create approval queue entry
-    const { error: queueErr } = await admin.from("approval_queue").insert({
-      firm_id: firmId,
-      entity_type: "message",
-      entity_id: message.id,
-      action_type: "message",
-      priority: 3,
-      status: "pending",
-      metadata: {
-        contact_name: contactName,
-        channel,
-        summary: content.length > 120 ? content.slice(0, 120) + "…" : content,
-      },
-    });
-
-    if (queueErr) {
-      throw new Error(`Failed to create approval entry: ${queueErr.message}`);
-    }
-  } else {
-    // Auto-approve: mark as approved (dispatch happens via approval flow)
-    await admin
-      .from("messages")
-      .update({ status: "approved" })
-      .eq("id", message.id)
-      .eq("firm_id", firmId);
-  }
-
-  // Audit log
   await admin.rpc("insert_audit_log", {
     p_firm_id: firmId,
     p_actor_id: userId,
-    p_action: "message.composed",
+    p_action: "message.dispatched",
     p_entity_type: "message",
     p_entity_id: message.id,
-    p_before: null,
-    p_after: { channel, status, content_length: content.length },
+    p_before: { status: "approved" },
+    p_after: {
+      status: "sent",
+      channel,
+      provider,
+      external_id: externalId,
+      dry_run: dispatchResult.result.dryRun,
+      sender: "attorney",
+    },
     p_metadata: null,
   });
 
   revalidatePath("/conversations");
-  revalidatePath("/approvals");
+  revalidatePath("/leads", "layout");
 
-  return message.id;
+  return {
+    messageId: message.id,
+    status: "sent",
+    sentAt,
+    externalId,
+    provider,
+    dryRun: dispatchResult.result.dryRun,
+  };
 }

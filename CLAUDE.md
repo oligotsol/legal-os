@@ -155,7 +155,6 @@ These code paths still bake in legal assumptions and will need refactoring as we
 
 - `approval_queue.action_type` CHECK constraint — hardcodes `engagement_letter`. Must be replaced with a vertical-driven action-type registry before a non-legal tenant onboards.
 - Ethics scanner (`src/lib/ai/ethics-scanner.ts`) — bar-rule / UPL / jurisdictional checks. Other verticals need different compliance scanners (HIPAA, building-code disclosures, etc.). Same shape, different rules.
-- Lawcus integration is law-specific by definition.
 - The `matters` and `engagement_letters` table names lean legal. Roofing equivalent is `projects` / `contracts`. Probably acceptable as-is — these can map at the vertical-template layer rather than be renamed.
 
 When you touch any of these, pause and ask: am I making this more vertical-aware, or am I making it more legal-locked? The first is good, the second is a foot-gun for the platform.

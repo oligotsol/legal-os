@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { AlertTriangle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { formatRelativeTime } from "@/lib/format";
@@ -32,28 +32,22 @@ interface ConversationCardProps {
 }
 
 export function ConversationCard({ conversation }: ConversationCardProps) {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-
-  const isSelected = searchParams.get("id") === conversation.id;
-
-  function handleClick() {
-    const params = new URLSearchParams(searchParams.toString());
-    params.set("id", conversation.id);
-    router.push(`/conversations?${params.toString()}`);
-  }
+  // Conversations always belong to a lead post-2026-05-04. Fall back to the
+  // conversation id only for legacy rows so we never render a dead card.
+  const href = conversation.leadId
+    ? `/leads/${conversation.leadId}?conversation=${conversation.id}`
+    : `/leads`;
 
   const statusColor = STATUS_COLORS[conversation.status] ?? "bg-gray-400";
   const phaseLabel = PHASE_LABELS[conversation.phase] ?? conversation.phase;
 
   return (
-    <button
-      onClick={handleClick}
+    <Link
+      href={href}
       className={`
-        group relative w-full overflow-hidden rounded-lg border bg-card p-4 pl-5 text-left
+        group relative block w-full overflow-hidden rounded-lg border bg-card p-4 pl-5 text-left
         ring-1 ring-foreground/10 transition-all duration-200 ease-out
         hover:-translate-y-px hover:shadow-md hover:shadow-foreground/5 hover:ring-foreground/20
-        ${isSelected ? "ring-primary/50 shadow-md shadow-primary/5" : ""}
       `}
     >
       {/* Channel-coded ribbon */}
@@ -62,7 +56,7 @@ export function ConversationCard({ conversation }: ConversationCardProps) {
         className={`
           absolute inset-y-0 left-0 w-1
           ${ribbonForChannel(conversation.channel)}
-          ${isSelected ? "opacity-100" : "opacity-70 group-hover:opacity-100"}
+          opacity-70 group-hover:opacity-100
           transition-opacity duration-200
         `}
       />
@@ -111,6 +105,6 @@ export function ConversationCard({ conversation }: ConversationCardProps) {
           )}
         </div>
       </div>
-    </button>
+    </Link>
   );
 }

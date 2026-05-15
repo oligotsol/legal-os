@@ -390,11 +390,10 @@ describe("E2E Happy Path", () => {
     });
 
     expect(result.engagementLetterId).toBeDefined();
-    expect(result.templateKey).toBe("engagement_letter_TX");
-    expect(result.variables.clientName).toBe("Jane Doe");
-    expect(result.variables.totalFee).toBe(1800);
-    expect(result.variables.stateCode).toBe("TX");
-    expect(result.variables.firmName).toContain("E2E Test Firm");
+    expect(result.context.client_name).toBe("Jane Doe");
+    expect(result.context.engagement_fee_amount).toBe(1800);
+    expect(result.context.jurisdiction).toBe("TX");
+    expect(result.context.firm_identity.legal_name).toContain("E2E Test Firm");
 
     // Verify letter is in draft status
     const { data: letter } = await admin

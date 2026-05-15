@@ -49,6 +49,7 @@ export async function generateDraftReply(
     "negotiation_config",
     "scheduling_config",
     "firm_scope",
+    "voice_doctrine",
   ];
 
   const { data: configs } = await admin
@@ -66,6 +67,14 @@ export async function generateDraftReply(
   const negConfig = configMap.negotiation_config ?? {};
   const schedConfig = configMap.scheduling_config ?? {};
   const firmScope = configMap.firm_scope ?? null;
+  // Voice doctrine — firm-supplied premium-voice prompt (CLAUDE.md §6/§7).
+  // Disabled when row is missing or {enabled: false}. The actual prompt body
+  // lives at firm_config.voice_doctrine.content so it ports per-tenant.
+  const voiceDoctrineRow = configMap.voice_doctrine ?? null;
+  const voiceDoctrine =
+    voiceDoctrineRow && voiceDoctrineRow.enabled !== false
+      ? ((voiceDoctrineRow.content as string | undefined) ?? null)
+      : null;
 
   const { data: conversation } = await admin
     .from("conversations")
@@ -196,6 +205,7 @@ export async function generateDraftReply(
               | undefined) ?? {},
         }
       : undefined,
+    voiceDoctrine,
   };
 
   const converseContext: ConversationContext = {

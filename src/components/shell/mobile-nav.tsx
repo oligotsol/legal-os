@@ -8,6 +8,7 @@ import {
   Kanban,
   MessageSquare,
   FileSignature,
+  PhoneCall,
   Menu,
   X,
 } from "lucide-react";
@@ -29,6 +30,7 @@ const NAV_ITEMS = [
   { href: "/approvals", label: "Approvals", icon: ShieldCheck },
   { href: "/pipeline", label: "Pipeline", icon: Kanban },
   { href: "/conversations", label: "Conversations", icon: MessageSquare },
+  { href: "/power-dialer", label: "Power Dialer", icon: PhoneCall },
   { href: "/engagements", label: "Engagements", icon: FileSignature },
 ] as const;
 

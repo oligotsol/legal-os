@@ -1,0 +1,290 @@
+<!--
+  LFL Universal Engagement Letter Template (draft).
+
+  Body-only HTML. Renderer wraps in <html>/<head>/<body> when previewing.
+  Future home: firm_config.engagement_letter_template (set via #92 seed).
+
+  Placeholders supported by src/lib/engagement/render-letter.ts:
+    Scalars: {client_name} {agreement_date} {jurisdiction} {jurisdiction_name}
+             {practice_area} {engagement_fee_amount} {deposit_amount}
+             {services_description} {firm_legal_name} {firm_address}
+             {firm_phone} {firm_fax} {firm_email} {firm_website}
+    Blocks:  {letterhead_html} {exhibit_a_html} {attorney_blocks_html}
+             {fixed_fees_rows_html} {notary_fees_rows_html}
+             {practice_area_expenses_html}
+
+  No em or en dashes. Source PDF uses "--" (double hyphen) consistently.
+-->
+
+{letterhead_html}
+
+<h1 class="doc-title">ATTORNEY-CLIENT ENGAGEMENT AGREEMENT</h1>
+
+<section class="clause" id="s1">
+  <h2>1. PARTIES AND JURISDICTION.</h2>
+  <p>This Attorney-Client Engagement Agreement (the "Agreement") is entered into on {agreement_date} (the "Agreement Date"), by and between {firm_legal_name} (the "Firm"), and {client_name} (the "Client"). The Firm and the Client are collectively referred to as the "Parties."</p>
+  <p class="jurisdiction-line"><strong>JURISDICTION:</strong> {jurisdiction_name}</p>
+  <p>The laws of the state identified above (the "Jurisdiction") govern this engagement. The Attorney of Record, applicable rules of professional conduct, venue, and state-specific provisions are determined by the Jurisdiction as set forth in Exhibit A attached hereto.</p>
+  <p>The Firm represents only the Client and does not represent any other individual or entity in this matter. There are no intended third-party beneficiaries to the relationship between the Firm and Client.</p>
+</section>
+
+<section class="clause" id="s2">
+  <h2>2. CONDITIONS PRECEDENT.</h2>
+  <p>This Agreement shall become effective upon satisfaction of all of the following conditions:</p>
+  <ol class="alpha">
+    <li>Client electronically signs and submits this Agreement;</li>
+    <li>Client pays the initial Deposit set forth in Section 4.3; and</li>
+    <li>Client completes any questionnaires and provides any documents reasonably necessary for the Firm to commence and complete the legal services requested by the Client.</li>
+  </ol>
+  <p>Upon satisfaction of the above, the Attorney of Record will acknowledge acceptance of representation by counter-signing this Agreement. No Attorney-Client relationship exists, and the Firm and its attorneys have no obligation to perform legal services until all of the above conditions are satisfied in full.</p>
+</section>
+
+<section class="clause" id="s3">
+  <h2>3. SCOPE OF REPRESENTATION.</h2>
+  <p>The Client hereby engages the Firm and the Attorney of Record identified in Exhibit A to provide the legal services described in Section 3.2 below (the "Matter").</p>
+
+  <h3>3.1 Limited Scope Representation.</h3>
+  <p>The Attorney's representation under this Agreement is strictly limited to the Matter described in this Section 3 and the specific services listed in Section 3.2. Any additional claims, related proceedings, new legal issues, or matters outside the scope of this Agreement, whether arising from the same facts or from newly discovered circumstances, shall require a separate written engagement agreement executed by both Parties before the Firm assumes any obligation to provide services in connection with such additional matters.</p>
+
+  <h3>3.2 Services Included.</h3>
+  <p>As part of this engagement, the Firm will provide the following legal services:</p>
+  <p class="services-description">{services_description}</p>
+  <p>The Attorney will keep the Client reasonably informed of progress on all included services and will provide the Client with an opportunity to review and approve all deliverables prior to finalization. The Firm does not bill by the hour. The Engagement Fee compensates the Firm for professional legal services, availability, and committed resources as described in Section 4.1. The Firm will maintain accurate records of all legal services performed and all expenses incurred in connection with this Matter. A summary of services performed and an itemized accounting of expenses are available to the Client upon written request.</p>
+
+  <h3>3.3 Optional Services.</h3>
+  <p>The following services are available at the Client's election and are not included in the Engagement Fee unless expressly stated in Section 3.2:</p>
+  <ol class="alpha">
+    <li>Remote Online Notarization (RON): $25.00 per session plus notary seal/certificate fees;</li>
+    <li>eRecording of deeds or documents: $10.00 service fee per document, plus applicable county recording fees; and</li>
+    <li>eFiling with state or federal agencies: $10.00 service fee per filing, plus applicable agency fees.</li>
+  </ol>
+  <p>The Client may arrange any of the above services independently. If the Client does so, the Firm bears no responsibility for errors, delays, or costs associated with independently arranged services.</p>
+
+  <h3>3.4 Services Excluded.</h3>
+  <p>Unless separately agreed in writing, the Firm is under no obligation to provide: (a) Representation in litigation, court proceedings, arbitration, or administrative hearings; (b) Preparation or filing of court pleadings, motions, or court documents; (c) Discovery, depositions, or trial preparation; (d) Tax preparation, tax filings, tax advice, or representation before taxing authorities; (e) Government filings, agency registrations, or business licensing unless specifically listed in Section 3.2; (f) Ongoing compliance monitoring or post-engagement advisory services unless specifically listed in Section 3.2; and (g) Any other service not expressly identified in Section 3.2. Any services outside the scope of Section 3.2 require a separate written engagement agreement and may incur additional fees.</p>
+</section>
+
+<section class="clause" id="s4">
+  <h2>4. FEES AND BILLING.</h2>
+  <p>The Parties have agreed that this Agreement and the legal services described in Section 3.2 shall be governed by a flat fee arrangement as set forth in this Section 4.</p>
+
+  <h3>4.1 Engagement Retainer and Flat Fee.</h3>
+  <p>The Client agrees to pay the Firm an engagement retainer and flat fee of <strong>{engagement_fee_amount}</strong> (the "Engagement Fee") for the legal services described in Section 3.2.</p>
+  <p>The Parties acknowledge and agree that the Engagement Fee constitutes a true retainer and engagement fee paid in exchange for the Firm's agreement to: (a) make its professional services, expertise, and judgment available to the Client upon execution of this Agreement; (b) reserve attorney and staff capacity dedicated to the preparation and completion of the Matter; (c) prioritize the Client's Matter within the Firm's active practice and allocate the necessary professional resources to complete the engagement; and (d) limit the acceptance of similar or competing engagements during the period of representation in order to maintain dedicated availability for the Client. The value of the Engagement Fee is derived from the Firm's commitment of availability, experience, professional judgment, and dedicated resources, and is not based on the number of hours expended or documents produced.</p>
+
+  <h4 class="block-heading">FEE DEPOSIT AND INFORMED CONSENT</h4>
+  <p>The Client acknowledges, understands, and provides informed consent to the following:</p>
+  <ol class="roman">
+    <li>The Client has the right to request that fees be placed in the attorney's trust account and withdrawn only as fees are earned through the performance of legal services;</li>
+    <li>Instead of trust account deposit, the Client voluntarily agrees and consents that the Engagement Fee shall be treated as earned by the Firm upon receipt and deposited directly into the Firm's operating account, and shall not be held in a trust or escrow account;</li>
+    <li>This consent is given freely, after having been informed of the alternative of trust account deposit, and the Client understands the distinction between the two arrangements; and</li>
+    <li>If the engagement terminates before completion of the Matter for any reason, the Firm will evaluate the services performed and resources committed, and will refund any portion of the Engagement Fee determined to be unearned in accordance with the applicable rules of professional conduct governing the Jurisdiction identified in Section 1.</li>
+  </ol>
+  <p>The Engagement Fee is due and payable in accordance with Section 4.3. Legal services will not commence until the required deposit has been received and fully processed by the Firm.</p>
+
+  <h3>4.2 Expenses.</h3>
+  <p>The Client acknowledges responsibility for all reasonable out-of-pocket costs and expenses incurred by the Firm on the Client's behalf in connection with the Matter. Expenses are separate from and in addition to the Engagement Fee. The Firm will notify the Client before incurring any single expense exceeding $100.00, and the Client's prior written approval is required before such expense is incurred. Expenses below $100.00 may be advanced by the Firm and invoiced to the Client. Optional services elected under Section 3.3 shall be invoiced and paid in full prior to performance regardless of amount. A detailed schedule of expenses is set forth in the Addendum titled "Expenses," incorporated herein by reference.</p>
+
+  <h3>4.3 Payment Terms.</h3>
+  <p>All payments under this Agreement are due upon receipt of invoice. Upon execution of this Agreement, the Client agrees to pay an initial deposit of <strong>{deposit_amount}</strong> (the "Deposit"). The Deposit will be applied toward the Engagement Fee. This Agreement is not in full force and legal services will not commence until the Deposit has been received and fully processed by the Firm. Any remaining balance beyond the Deposit is due as set forth in the applicable invoice or, if a payment plan has been authorized, in accordance with the Payment Plan Addendum.</p>
+
+  <h3>4.4 Payment Methods.</h3>
+  <ol class="alpha">
+    <li>Fee-Free Options: Zelle is available with no additional processing fees. Payment instructions provided upon request.</li>
+    <li>ACH and Debit/Credit Card: Available via the Firm's secure payment portal. Processing fees may apply.</li>
+  </ol>
+
+  <h3>4.5 Late Payments.</h3>
+  <p>All payments are due upon receipt of invoice. For payment plan installments, payments are considered late if not received within five (5) days of the scheduled installment date, and a late fee of one and one-half percent (1.5%) per month (18% per annum) may be applied to the overdue balance. If an invoice or installment is unpaid for more than fifteen (15) days, the Firm will halt all legal work and the entire outstanding flat fee amount will become due immediately. If any invoice or installment remains unpaid for more than ninety (90) days, the Firm reserves the right to initiate collection actions without further notification, including asserting a lien for services rendered and seeking recovery of reasonable collection costs and attorney's fees.</p>
+
+  <h3>4.6 Payment Disputes and Refund Policy.</h3>
+  <p>If the Client has a concern regarding any invoice or the Engagement Fee, the Client must notify the Firm in writing within thirty (30) days of the invoice date. The Firm will respond in writing within ten (10) business days. The Parties agree to first attempt resolution through good faith communication. As set forth in Section 4.1, the Engagement Fee is earned upon receipt. If this Agreement is terminated before completion, the Firm will conduct a good-faith evaluation of services performed and resources committed, and will refund any portion determined to be unearned. No refund determination will be made by staff. All refund evaluations and decisions are made exclusively by the Attorney of Record.</p>
+</section>
+
+<section class="clause" id="s5">
+  <h2>5. CLIENT RESPONSIBILITIES.</h2>
+  <p>The Client shall provide the Attorney with complete, accurate, and timely information, documents, and records reasonably necessary for the Attorney to perform the Services described in Section 3.2. The Client understands that the quality and completeness of the legal documents depend directly upon the accuracy and completeness of the information provided.</p>
+  <p>The Client shall promptly review all documents, drafts, and communications provided by the Firm and shall respond to requests within a reasonable time. Unreasonable delay may result in delay of the completion of the Services. The Client shall promptly notify the Attorney in writing of any material changes in circumstances, including changes in marital status, birth or adoption of children, acquisition or disposition of significant assets, changes in health status, or any other event that may affect the Client's legal goals. The Client shall cooperate with the Firm in scheduling and completing all steps necessary to execute, notarize, and record legal documents. Failure to fulfill these responsibilities may impair the Attorney's ability to perform the Services effectively and may result in additional fees, delays, or the need for supplemental engagement.</p>
+</section>
+
+<section class="clause" id="s6">
+  <h2>6. COMMUNICATION.</h2>
+  <p>All communication between the Client and the Firm regarding this Matter shall be conducted exclusively in writing via email. The Client agrees to direct all correspondence to the Attorney's email address provided by the Firm. All substantive communications, including questions, instructions, approvals, and the transmission of information or documents, shall be conducted by email. The Firm will endeavor to respond within five (5) business days of receipt. The Client acknowledges that email communication carries inherent risks, including interception, misdirection, and unauthorized access, and consents to the use of email for all communications related to this Matter.</p>
+</section>
+
+<section class="clause" id="s7">
+  <h2>7. MARKETING MATERIALS DISCLAIMER.</h2>
+  <p>The Client acknowledges that any marketing materials produced by or on behalf of the Firm are intended for general informational purposes only and do not constitute legal advice, a guarantee of results, or a promise of any specific outcome. Case results, testimonials, or endorsements are not indicative of future results. The Client agrees that the decision to engage the Firm was based on independent evaluation and the terms set forth in this Agreement.</p>
+</section>
+
+<section class="clause" id="s8">
+  <h2>8. CLIENT FILE RETENTION.</h2>
+  <p>Upon completion or termination, the Firm will retain the Client's file for seven (7) years. During that period, the Client may request copies by submitting a written request. After expiration, the Firm may destroy the file without further notice. The Client's original executed legal documents are the Client's property and will be delivered upon completion.</p>
+  <h3>8.1 Work Product and Internal Materials.</h3>
+  <p>The Client acknowledges that the Firm's internal work product, including attorney notes, internal memoranda, research drafts, preliminary analyses, and internal correspondence, is the exclusive property of the Firm and is protected by the attorney work product doctrine. Such materials will not be disclosed to the Client or any third party.</p>
+</section>
+
+<section class="clause" id="s9">
+  <h2>9. CONFLICTS OF INTEREST.</h2>
+  <p>The Firm has conducted a reasonable conflicts check and is not aware of any conflict that would prevent representation. If the Client is seeking legal services jointly with a spouse, partner, or co-owner, the Firm will provide a separate Joint Representation Engagement Agreement. The Client agrees to promptly disclose any facts that may give rise to a conflict. If a conflict arises that cannot be resolved, the Firm may withdraw per Section 11.</p>
+</section>
+
+<section class="clause" id="s10">
+  <h2>10. CONFIDENTIALITY AND ATTORNEY-CLIENT PRIVILEGE.</h2>
+  <p>The Firm shall not disclose any information relating to the Client's Matter to any person or entity not a party to this Agreement without prior written consent. This obligation is grounded in the attorney-client privilege and the duty of confidentiality under the applicable rules of professional conduct, and shall survive termination. The Firm may disclose information as required by applicable law, a valid court order, or to collect fees owed.</p>
+</section>
+
+<section class="clause" id="s11">
+  <h2>11. TERMINATION AND WITHDRAWAL.</h2>
+  <h3>11.1 Natural Completion.</h3>
+  <p>This Agreement terminates automatically upon the Firm's completion and delivery of all Services and the Client's receipt of all final work product.</p>
+  <h3>11.2 Termination by Client.</h3>
+  <p>The Client may terminate at any time by written notice. The Client remains responsible for all fees earned and expenses incurred through the date of termination. Any refund will be determined per Section 4.6.</p>
+  <h3>11.3 Withdrawal by Attorney.</h3>
+  <p>The Firm may withdraw if: (a) the Client fails to fulfill responsibilities under Section 5; (b) fails to make timely payment; (c) provides false or misleading information; (d) a conflict arises that cannot be resolved; (e) the Client's conduct renders effective representation unreasonably difficult; or (f) other good cause exists under the applicable rules.</p>
+  <h3>11.4 Effect of Termination.</h3>
+  <p>Sections 4, 8, 10, 12, 18, and 19 survive termination.</p>
+</section>
+
+<section class="clause" id="s12">
+  <h2>12. DISPUTE RESOLUTION.</h2>
+  <p>The Client is encouraged to contact the Attorney directly in writing with any concern. If a concern cannot be resolved informally, the Client may submit fee disputes to the fee dispute resolution program administered by the state bar of the Jurisdiction. The Firm will participate in good faith.</p>
+</section>
+
+<section class="clause" id="s13">
+  <h2>13. TAX DISCLAIMER.</h2>
+  <p>The Firm does not provide tax advice, preparation, planning, or representation before any taxing authority. Legal documents prepared under this Agreement may have significant tax implications. The Client is strongly encouraged to consult a qualified tax professional. The Firm expressly disclaims any responsibility for tax consequences arising from documents prepared under this Agreement.</p>
+</section>
+
+<section class="clause" id="s14">
+  <h2>14. ARTIFICIAL INTELLIGENCE DISCLAIMER.</h2>
+  <p>The Client acknowledges that the Firm may utilize artificial intelligence tools in the preparation, drafting, research, and review of legal documents. All AI-assisted work product is reviewed, verified, and approved by the Attorney before delivery. The Attorney retains full professional responsibility for all legal work provided to the Client.</p>
+</section>
+
+<section class="clause" id="s15">
+  <h2>15. ELECTRONIC SIGNATURES.</h2>
+  <p>The Parties agree that this Agreement may be executed by electronic signature with the same legal force as original ink signatures, enforceable under the Uniform Electronic Transactions Act as enacted in the Jurisdiction, the E-SIGN Act (15 U.S.C. 7001-7031), and all applicable laws. Each Party represents that the electronic signature affixed was made voluntarily and with the intent to be bound.</p>
+</section>
+
+<section class="clause" id="s16">
+  <h2>16. NO GUARANTEES.</h2>
+  <p>The Attorney has made no promises, guarantees, or representations regarding the outcome of this Matter or the effectiveness of any legal document. Legal documents should be reviewed periodically and updated as circumstances or applicable law change.</p>
+</section>
+
+<section class="clause" id="s17">
+  <h2>17. GOVERNING LAW.</h2>
+  <p>This Agreement shall be governed by the laws of the Jurisdiction identified in Section 1. Any legal action shall be brought exclusively in the courts located in the venue county identified in Exhibit A. Issues arising from the Attorney's professional conduct shall be governed by the applicable rules of professional conduct, which shall control in the event of any conflict with this Agreement.</p>
+</section>
+
+<section class="clause" id="s18">
+  <h2>18. COMPLETE AGREEMENT.</h2>
+  <p>This Agreement, together with any addenda, schedules, or exhibits, constitutes the entire agreement between the Parties and supersedes all prior negotiations, representations, and agreements. No modification shall be effective unless made in writing and signed by both Parties.</p>
+</section>
+
+<section class="clause" id="s19">
+  <h2>19. SEVERABILITY.</h2>
+  <p>If any provision is held invalid, illegal, or unenforceable, the remaining provisions continue in full force and effect.</p>
+</section>
+
+<section class="clause" id="s20">
+  <h2>20. ACKNOWLEDGEMENT.</h2>
+  <p>By signing below, the Client acknowledges: (1) having read this Agreement in its entirety; (2) having had the opportunity to ask questions; (3) entering into this Agreement voluntarily; (4) understanding the scope and fee arrangement; (5) the right to terminate per Section 11; (6) consent to the communication and electronic signature policies; (7) consent to the fee deposit arrangement described in Section 4.1; and (8) receipt of a copy of this Agreement.</p>
+</section>
+
+<p class="next-page-notice">[SIGNATURES ON NEXT PAGE]</p>
+
+<section class="page-break signature-page">
+  {letterhead_html}
+  <h2 class="page-title">SIGNATURE PAGE -- ATTORNEY-CLIENT ENGAGEMENT AGREEMENT</h2>
+  <p>IN WITNESS WHEREOF, the Parties have executed this Agreement as of the Agreement Date, agreeing to its terms and conditions.</p>
+
+  <div class="signature-row">
+    <h3>CLIENT</h3>
+    <div class="signature-block">
+      <div class="sig-line">{client_name}</div>
+      <div class="sig-meta"><span class="sig-label">Client Signature</span><span class="sig-date">Date</span></div>
+    </div>
+  </div>
+
+  <div class="signature-row">
+    <h3>ATTORNEY OF RECORD</h3>
+    <p class="muted">(As determined by the Jurisdiction selected in Section 1 per Exhibit A)</p>
+    <div class="signature-block">
+      <div class="sig-line"></div>
+      <div class="sig-meta"><span class="sig-label">Attorney Signature</span><span class="sig-date">Date</span></div>
+    </div>
+    {attorney_blocks_html}
+  </div>
+</section>
+
+<section class="page-break exhibit-a">
+  {letterhead_html}
+  <h2 class="page-title">EXHIBIT A -- JURISDICTION SCHEDULE</h2>
+  <p>The following terms apply based on the Jurisdiction identified in Section 1:</p>
+  {exhibit_a_html}
+</section>
+
+<section class="page-break expenses-addendum">
+  {letterhead_html}
+  <h2 class="page-title">EXPENSES ADDENDUM TO ATTORNEY-CLIENT ENGAGEMENT AGREEMENT</h2>
+
+  <h3>1. PARTIES.</h3>
+  <p>This Expenses Addendum (the "Addendum") is incorporated into and made a part of the Attorney-Client Engagement Agreement (the "Agreement") dated {agreement_date}, by and between {firm_legal_name} (the "Firm"), and {client_name} (the "Client"). In the event of any conflict between this Addendum and the Agreement, the terms of this Addendum shall control with respect to matters of expenses.</p>
+
+  <h3>2. PURPOSE.</h3>
+  <p>This Addendum sets forth the schedule of common fixed and variable expenses that may be incurred by the Firm on the Client's behalf. Expenses are separate from and in addition to the Engagement Fee. Actual expenses incurred will be invoiced in accordance with Section 4.2 of the Agreement.</p>
+
+  <h3>3. FIRM FIXED SERVICE FEES.</h3>
+  <table class="expense-table">
+    <thead><tr><th>Service / Expense</th><th>Unit</th><th>Firm Fee</th></tr></thead>
+    <tbody>{fixed_fees_rows_html}</tbody>
+  </table>
+
+  <h3>4. NOTARY FEES.</h3>
+  <p>Notary fees are set by applicable state law of the Jurisdiction identified in Section 1 and the notary statute in Exhibit A. The Firm may not charge more than the statutory maximum.</p>
+  <table class="expense-table">
+    <thead><tr><th>Notarial Act</th><th>Unit</th><th>Fee</th></tr></thead>
+    <tbody>{notary_fees_rows_html}</tbody>
+  </table>
+  <p>RON: Additional $25.00 per session applies when performed via remote online notarization.</p>
+
+  <h3>5. VARIABLE EXPENSES -- GOVERNMENT AND THIRD-PARTY FEES.</h3>
+  <p>Charged at actual cost billed by the applicable agency or vendor. Subject to change without notice.</p>
+  {practice_area_expenses_html}
+
+  <h3>6. EXPENSE AUTHORIZATION.</h3>
+  <p>Per Section 4.2 of the Agreement: (a) prior written approval required for expenses exceeding $100.00; (b) expenses below $100.00 may be advanced and invoiced; (c) optional services per Section 3.3 paid in full prior to performance. The Firm reserves the right to require advance payment for expenses reasonably anticipated to exceed $250.00.</p>
+
+  <h3>7. INVOICING AND PAYMENT.</h3>
+  <p>Expenses will be invoiced as incurred or at the conclusion of the engagement. All expense invoices are due upon receipt and subject to the late payment provisions of Section 4.5.</p>
+
+  <h3>8. FEE CHANGES.</h3>
+  <p>Government and third-party fees are outside the Firm's control and may change without notice. Rates herein are for reference based on fees in effect at the time of this Agreement and are not guaranteed.</p>
+
+  <h3>9. INCORPORATION.</h3>
+  <p>This Addendum is incorporated into and forms a part of the Agreement. All terms not modified herein remain in full force and effect.</p>
+
+  <p class="next-page-notice">[SIGNATURES ON NEXT PAGE]</p>
+</section>
+
+<section class="page-break signature-page">
+  {letterhead_html}
+  <h2 class="page-title">SIGNATURE PAGE -- EXPENSES ADDENDUM</h2>
+  <p>IN WITNESS WHEREOF, the Parties have executed this Addendum as of the Agreement Date, agreeing to its terms and conditions.</p>
+
+  <div class="signature-row">
+    <h3>CLIENT</h3>
+    <div class="signature-block">
+      <div class="sig-line">{client_name}</div>
+      <div class="sig-meta"><span class="sig-label">Client Signature</span><span class="sig-date">Date</span></div>
+    </div>
+  </div>
+
+  <div class="signature-row">
+    <h3>ATTORNEY OF RECORD</h3>
+    <div class="signature-block">
+      <div class="sig-line"></div>
+      <div class="sig-meta"><span class="sig-label">Attorney Signature</span><span class="sig-date">Date</span></div>
+    </div>
+  </div>
+</section>

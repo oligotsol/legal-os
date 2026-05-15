@@ -1,18 +1,22 @@
 "use client";
 
 import Link from "next/link";
+import { AlertTriangle } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
-import { formatDollars } from "@/lib/format";
+import { formatDollars, formatRelativeTime } from "@/lib/format";
 import type { ApprovalQueueItem } from "@/types/database";
+import type { MessageContextThread } from "./actions";
 
 interface EntityDetailContentProps {
   queueItem: ApprovalQueueItem;
   entity: Record<string, unknown> | null;
+  messageContext?: MessageContextThread | null;
 }
 
 export function EntityDetailContent({
   queueItem,
   entity,
+  messageContext,
 }: EntityDetailContentProps) {
   if (!entity) {
     return (
@@ -24,7 +28,7 @@ export function EntityDetailContent({
 
   switch (queueItem.entity_type) {
     case "message":
-      return <MessageDetail entity={entity} />;
+      return <MessageDetail entity={entity} messageContext={messageContext ?? null} />;
     case "fee_quote":
       return <FeeQuoteDetail entity={entity} />;
     case "engagement_letter":
@@ -40,37 +44,173 @@ export function EntityDetailContent({
   }
 }
 
-function MessageDetail({ entity }: { entity: Record<string, unknown> }) {
-  // Note: the message body is shown (and is editable) in the action panel
-  // below — we don't repeat it here. This block surfaces channel + AI
-  // metadata so the attorney can verify which path the reply will go out
-  // on and what phase the AI thought we were in.
+function MessageDetail({
+  entity,
+  messageContext,
+}: {
+  entity: Record<string, unknown>;
+  messageContext: MessageContextThread | null;
+}) {
   const meta = entity.metadata as Record<string, unknown> | null;
   const reasoning = meta?.reasoning as string | undefined;
   const phase = meta?.phase_recommendation as string | undefined;
   const escalated = meta?.escalation_signal as boolean | undefined;
+  const escalationReason = meta?.escalation_reason as string | undefined;
+  const latestInbound = messageContext?.latestInbound ?? null;
+  const recent = messageContext?.recent ?? [];
+  const priorInboundCount = recent.filter((m) => m.direction === "inbound").length;
+  const noPriorContext = priorInboundCount === 0;
+
   return (
-    <div className="space-y-3">
-      <div className="flex flex-wrap gap-x-6 gap-y-2">
-        {entity.channel ? (
-          <DetailRow label="Channel" value={String(entity.channel)} />
-        ) : null}
-        {entity.sender_type ? (
-          <DetailRow label="Sender" value={String(entity.sender_type)} />
-        ) : null}
-        {phase ? <DetailRow label="Phase" value={phase} /> : null}
-        {escalated ? <DetailRow label="Escalation" value="flagged" /> : null}
-      </div>
-      {reasoning && (
-        <div>
-          <h4 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-            AI Reasoning
-          </h4>
-          <p className="mt-1.5 text-xs italic text-muted-foreground">
-            {reasoning}
-          </p>
+    <div className="space-y-4">
+      {/* Escalation callout — surfaces the flag prominently when the AI
+          itself flagged the draft for review (most commonly because the
+          thread has no prior context). */}
+      {escalated && (
+        <div className="flex gap-2.5 rounded-md border border-amber-300 bg-amber-50 p-3 dark:border-amber-900/60 dark:bg-amber-950/30">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-700 dark:text-amber-400" />
+          <div className="min-w-0 space-y-1">
+            <p className="text-xs font-semibold uppercase tracking-wider text-amber-700 dark:text-amber-400">
+              AI flagged this for review
+            </p>
+            <p className="text-xs leading-relaxed text-amber-900 dark:text-amber-200">
+              {escalationReason ??
+                "The AI marked the draft as needing attorney attention. Review the prospect's message + prior thread below before sending."}
+            </p>
+          </div>
         </div>
       )}
+
+      {/* What the prospect said — leads the panel because this is the
+          single most useful thing for the reviewer. */}
+      {latestInbound ? (
+        <section className="rounded-md border bg-card">
+          <div className="border-b px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            What they said{" "}
+            <span className="font-normal normal-case text-muted-foreground/80">
+              · {formatRelativeTime(latestInbound.createdAt)}
+              {latestInbound.channel ? ` · ${latestInbound.channel}` : ""}
+            </span>
+          </div>
+          <p className="max-h-[220px] overflow-y-auto whitespace-pre-wrap px-3 py-2 text-sm leading-relaxed text-foreground">
+            {latestInbound.content}
+          </p>
+        </section>
+      ) : (
+        <section className="rounded-md border border-dashed bg-muted/30 px-3 py-2">
+          <p className="text-xs italic text-muted-foreground">
+            No inbound message on record for this conversation. The AI drafted
+            this without a prospect message to respond to; verify before sending.
+          </p>
+        </section>
+      )}
+
+      {/* Prior thread (other messages, both directions). Collapsed by
+          default if there's anything more than what's already shown. */}
+      {recent.length > 0 && (
+        <details className="group rounded-md border bg-card">
+          <summary className="cursor-pointer list-none border-b px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground marker:hidden">
+            Prior thread ({messageContext?.totalMessages ?? recent.length} total messages)
+            <span className="float-right font-normal normal-case text-muted-foreground/70 group-open:hidden">
+              expand
+            </span>
+            <span className="float-right hidden font-normal normal-case text-muted-foreground/70 group-open:inline">
+              collapse
+            </span>
+          </summary>
+          <ul className="max-h-[260px] divide-y overflow-y-auto">
+            {recent.map((m) => (
+              <li
+                key={m.id}
+                className={`px-3 py-2 ${
+                  m.direction === "inbound"
+                    ? "bg-emerald-50/30 dark:bg-emerald-950/15"
+                    : "bg-muted/20"
+                }`}
+              >
+                <div className="mb-1 flex items-center gap-1.5 text-[10px]">
+                  <span
+                    className={`rounded px-1.5 py-0.5 font-semibold uppercase tracking-wider ${
+                      m.direction === "inbound"
+                        ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300"
+                        : "bg-muted text-muted-foreground"
+                    }`}
+                  >
+                    {m.direction === "inbound" ? "Prospect" : "We sent"}
+                  </span>
+                  {m.channel && (
+                    <span className="rounded bg-background px-1.5 py-0.5 uppercase tracking-wider text-muted-foreground">
+                      {m.channel}
+                    </span>
+                  )}
+                  {m.status && m.status !== "sent" && m.status !== "delivered" && (
+                    <span className="rounded bg-background px-1.5 py-0.5 uppercase tracking-wider text-muted-foreground">
+                      {m.status}
+                    </span>
+                  )}
+                  <span className="ml-auto tabular-nums text-muted-foreground">
+                    {formatRelativeTime(m.createdAt)}
+                  </span>
+                </div>
+                <p className="whitespace-pre-wrap text-xs leading-relaxed text-foreground/90">
+                  {m.content.length > 600
+                    ? m.content.slice(0, 600) + "…"
+                    : m.content}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+
+      {/* Smaller secondary metadata + AI reasoning. The body of the draft
+          itself is in the editable textarea in the action panel below. */}
+      <div className="space-y-2 rounded-md border bg-muted/20 px-3 py-2">
+        <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px]">
+          {entity.channel ? (
+            <span className="text-muted-foreground">
+              Channel:{" "}
+              <span className="font-medium text-foreground">
+                {String(entity.channel)}
+              </span>
+            </span>
+          ) : null}
+          {entity.sender_type ? (
+            <span className="text-muted-foreground">
+              Sender:{" "}
+              <span className="font-medium text-foreground">
+                {String(entity.sender_type)}
+              </span>
+            </span>
+          ) : null}
+          {phase ? (
+            <span className="text-muted-foreground">
+              Phase:{" "}
+              <span className="font-medium text-foreground">{phase}</span>
+            </span>
+          ) : null}
+        </div>
+        {noPriorContext && (
+          <p className="text-[11px] italic text-muted-foreground">
+            Note: this conversation has no prior inbound messages on record. If
+            the AI&apos;s draft references something the prospect supposedly
+            said, the underlying signal may be stale or routed incorrectly.
+          </p>
+        )}
+        {reasoning && (
+          <details className="group">
+            <summary className="cursor-pointer text-[10px] font-semibold uppercase tracking-wider text-muted-foreground marker:hidden">
+              AI reasoning
+              <span className="ml-1 font-normal normal-case text-muted-foreground/70 group-open:hidden">
+                (expand)
+              </span>
+            </summary>
+            <p className="mt-1.5 whitespace-pre-wrap text-[11px] italic leading-relaxed text-muted-foreground">
+              {reasoning}
+            </p>
+          </details>
+        )}
+      </div>
     </div>
   );
 }

@@ -130,14 +130,19 @@ export async function listUnreadMessages(
     );
   }
 
-  // Query: any mail in the last 24h with the intake label, not from us.
+  // Query: any mail in the last 24h with the intake label.
   // We deliberately do NOT require `is:unread` or `in:inbox`:
   //   - is:unread misses any email Garrison already opened in Gmail.
   //   - in:inbox misses any "Skip the Inbox" filter routing.
+  // Self-loop avoidance is NOT in this query — `-from:me` was too broad
+  // (excluded any address linked to the OAuth'd Google account, not just
+  // the firm's send-address). The downstream `firmFrom` check in
+  // gmail-poller.ts compares against `firm_config.email_config.default_from`
+  // and is the authoritative loop guard.
   // De-duplication is handled downstream via webhook_events.idempotency_key
   // (keyed by Gmail message id) so re-listing already-processed mail is a
   // cheap no-op.
-  let q = `newer_than:1d -from:me label:${options.labelQuery}`;
+  let q = `newer_than:1d label:${options.labelQuery}`;
   if (options.afterMessageId) {
     q += ` after:${options.afterMessageId}`;
   }

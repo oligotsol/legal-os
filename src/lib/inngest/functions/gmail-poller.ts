@@ -24,6 +24,11 @@ import {
   markAsRead,
   extractEmail,
 } from "@/lib/integrations/gmail/fetch";
+import {
+  parseForwardedLead,
+  type ForwardParserConfig,
+  type ParsedForwardedLead,
+} from "@/lib/integrations/gmail/forward-parser";
 import { processInboundMessage } from "@/lib/pipeline/process-inbound-message";
 
 // ---------------------------------------------------------------------------
@@ -101,6 +106,22 @@ async function processGmailForFirm(
     process.env.GMAIL_INTAKE_LABEL ??
     "legal-os-intake";
 
+  // Forward-parser config: when an inbound email's outer From is one of the
+  // configured forwarder addresses (Garrison forwarding LegalMatch leads
+  // to himself), parse the body for the real lead's identity so each
+  // forwarded notification becomes its own lead, not a message glued to
+  // Garrison's contact. Disabled by default for tenants without this row.
+  const { data: parserCfgRow } = await admin
+    .from("firm_config")
+    .select("value")
+    .eq("firm_id", firmId)
+    .eq("key", "gmail_forward_parser")
+    .maybeSingle();
+  const parserCfg = (parserCfgRow?.value ?? {
+    enabled: false,
+    forwarderAddresses: [],
+  }) as ForwardParserConfig;
+
   const { data: syncState } = await admin
     .from("integration_sync_state")
     .select("cursor, id")
@@ -167,12 +188,25 @@ async function processGmailForFirm(
         continue;
       }
 
-      await processInboundMessage({
+      // Forwarded-lead detection. When parsed, the "real" lead's identity
+      // comes from the body, not the outer envelope. We override the
+      // contact-identifier passed downstream so each forwarded vendor
+      // notification creates a separate lead.
+      const parsed: ParsedForwardedLead | null = parseForwardedLead({
+        fromEmail: email.fromEmail,
+        subject: email.subject,
+        body: email.textBody,
+        config: parserCfg,
+      });
+
+      const result = await processInboundMessage({
         admin,
         candidateFirmIds: [firmId],
         channel: "email",
-        fromIdentifier: email.fromEmail,
-        fromDisplayName: extractSenderName(email.from),
+        fromIdentifier: parsed ? parsed.email : email.fromEmail,
+        fromDisplayName: parsed
+          ? parsed.name
+          : extractSenderName(email.from),
         body: email.textBody || email.subject,
         externalMessageId: email.messageId,
         source: "gmail",
@@ -181,9 +215,37 @@ async function processGmailForFirm(
           text_preview: email.textBody.slice(0, 500),
           gmail_message_id: email.messageId,
           gmail_thread_id: email.threadId,
+          ...(parsed
+            ? {
+                forwarded_from: email.fromEmail,
+                parsed_lead: parsed.fields,
+                case_id: parsed.caseId,
+                state: parsed.state,
+                city: parsed.city,
+                matter_type: parsed.matterType,
+                client_description: parsed.clientDescription,
+              }
+            : {}),
         },
         subjectHint: email.subject,
       });
+
+      // Enrich the contact row with parsed phone/state if we have them and
+      // the contact didn't already have values.
+      if (parsed && result.contactId) {
+        const patch: Record<string, unknown> = {};
+        if (parsed.phone) patch.phone = parsed.phone;
+        if (parsed.state) patch.state = parsed.state;
+        if (Object.keys(patch).length) {
+          await admin
+            .from("contacts")
+            .update(patch)
+            .eq("id", result.contactId)
+            .or(
+              `phone.is.null,${parsed.state ? "state.is.null" : "phone.is.null"}`,
+            );
+        }
+      }
 
       await markAsRead(credentials, msgStub.id);
       await markGmailEventProcessed(admin, msgStub.id);

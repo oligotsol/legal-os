@@ -21,9 +21,16 @@
 
 import type { createAdminClient } from "@/lib/supabase/admin";
 import { scanMessage, type EthicsScanConfig } from "@/lib/ai/ethics-scanner";
+import {
+  loadJurisdictionConfig,
+  routeLead,
+} from "@/lib/leads/jurisdiction-routing";
 import { cancelPendingDrips } from "@/lib/pipeline/cancel-on-reply";
 import { executeAutoRefer } from "@/lib/pipeline/auto-refer";
 import { generateDraftReply } from "@/lib/ai/conversation/generate-draft-reply";
+import { summarizeLeadDescription } from "@/lib/ai/summarize-lead";
+import { generateLeadDialerAssets } from "@/lib/pipeline/generate-lead-dialer-assets";
+import { detectOptOutKeyword, recordOptOut } from "@/lib/sms/opt-outs";
 import { inngest } from "@/lib/inngest/client";
 
 type AdminClient = ReturnType<typeof createAdminClient>;
@@ -67,7 +74,8 @@ export type ProcessInboundDisposition =
   | "ok"
   | "auto_dnc"
   | "auto_referred"
-  | "escalated";
+  | "escalated"
+  | "dropped_jurisdiction";
 
 export interface ProcessInboundResult {
   firmId: string;
@@ -94,6 +102,29 @@ const FALLBACK_ETHICS_CONFIG: EthicsScanConfig = {
   beebeGrandfatherActive: false,
   highValueThreshold: 0,
 };
+
+/**
+ * Best-effort extraction of a state code from the inbound payload.
+ *
+ * Sources we know about today:
+ *   - LegalMatch forwarded emails carry a "State" field in the parsed body
+ *   - Manual CSV imports stamp payload.state
+ *   - Inbound SMS rarely has state info -- returns null in that case
+ *
+ * Caller routes this through `routeLead`, which normalizes "Texas"/"tx"/"TX"
+ * to "TX" and handles null/empty gracefully.
+ */
+function extractStateFromPayload(payload: unknown): string | null {
+  if (!payload || typeof payload !== "object") return null;
+  const p = payload as Record<string, unknown>;
+  const direct = typeof p.state === "string" ? p.state : null;
+  if (direct) return direct;
+  const nested = p.lead as Record<string, unknown> | undefined;
+  if (nested && typeof nested.state === "string") return nested.state;
+  const parsed = p.parsed as Record<string, unknown> | undefined;
+  if (parsed && typeof parsed.state === "string") return parsed.state;
+  return null;
+}
 
 async function loadEthicsConfigForFirm(
   admin: AdminClient,
@@ -163,6 +194,31 @@ export async function processInboundMessage(
     firmId = candidateFirmIds[0];
     isNewLead = true;
 
+    // Jurisdiction routing for the auto-intake path. We try to glean state
+    // from the inbound payload (some sources -- LegalMatch, manual referrals
+    // -- include a state field in the body). If it's outside the supported
+    // set we DROP -- per the brief, leads from unserved states must not be
+    // inserted. If state is unknown we insert unrouted; the conversation
+    // flow can backfill state and attorney later.
+    const jurisdictionConfig = await loadJurisdictionConfig(admin, firmId);
+    const stateFromPayload = extractStateFromPayload(rawPayload);
+    const routing = routeLead(stateFromPayload, jurisdictionConfig);
+    if (routing.decision === "unsupported") {
+      console.warn(
+        `[process-inbound] dropping inbound lead from ${fromIdentifier}: state "${routing.normalizedState}" outside supported jurisdictions (${jurisdictionConfig.supportedStates.join(", ")})`,
+      );
+      return {
+        firmId,
+        conversationId: "",
+        contactId: "",
+        leadId: null,
+        isNewLead: false,
+        disposition: "dropped_jurisdiction",
+        shortCircuit: true,
+        ethicsDisposition: "skipped",
+      };
+    }
+
     const leadInsert: Record<string, unknown> = {
       firm_id: firmId,
       source,
@@ -170,6 +226,12 @@ export async function processInboundMessage(
       channel,
       payload: rawPayload ?? { inbound: body },
       priority: 5,
+      // Mirror the display name onto the lead row so the leads list doesn't
+      // need to join `contacts` just to render a name. Fall back to the
+      // identifier (phone/email) so the column is never null.
+      full_name: fromDisplayName?.trim() || fromIdentifier,
+      state: routing.normalizedState,
+      assigned_attorney_name: routing.assignedAttorneyName,
     };
     leadInsert[leadIdentifierColumn] = fromIdentifier;
 
@@ -274,6 +336,62 @@ export async function processInboundMessage(
     .eq("id", conversationId);
 
   // -------------------------------------------------------------------
+  // Lead description summary — concise one-liner for the leads table.
+  // Skip if not a new lead (existing lead already has its summary), and
+  // skip on errors (non-fatal — leads list shows "Pending Intake" if null).
+  // -------------------------------------------------------------------
+  if (isNewLead && leadId) {
+    try {
+      const rawAny = (rawPayload ?? {}) as Record<string, unknown>;
+      const summary = await summarizeLeadDescription({
+        matterType: (rawAny.matter_type as string | undefined) ?? null,
+        clientDescription: (rawAny.client_description as string | undefined) ?? null,
+        state: contactState,
+        recentMessages: [body],
+        source,
+        channel,
+      });
+      const mergedPayload = {
+        ...rawAny,
+        description_summary: summary.description,
+      };
+      await admin.from("leads").update({ payload: mergedPayload }).eq("id", leadId);
+      await admin.from("ai_jobs").insert({
+        firm_id: firmId,
+        model: summary.model,
+        purpose: "summarize_lead",
+        entity_type: "lead",
+        entity_id: leadId,
+        input_tokens: summary.inputTokens,
+        output_tokens: summary.outputTokens,
+        cost_cents: summary.costCents,
+        latency_ms: summary.latencyMs,
+        status: "completed",
+        request_metadata: { source, channel },
+        privileged: false,
+      });
+    } catch (err) {
+      console.error(
+        `[processInboundMessage] summarizeLeadDescription failed for lead ${leadId}:`,
+        err,
+      );
+    }
+
+    // Power-dialer call script + at-a-glance background brief. Generated
+    // once at intake so the dialer card is ready the moment Garrison picks
+    // this lead up. Best-effort — failures are logged but don't block
+    // intake (dialer card has fallback templates).
+    try {
+      await generateLeadDialerAssets({ admin, firmId, leadId });
+    } catch (err) {
+      console.error(
+        `[processInboundMessage] generateLeadDialerAssets failed for lead ${leadId}:`,
+        err,
+      );
+    }
+  }
+
+  // -------------------------------------------------------------------
   // Ethics scan — config is firm-specific, loaded from firm_config.
   // (CLAUDE.md non-negotiable #7: business rules are configuration.)
   // -------------------------------------------------------------------
@@ -290,13 +408,29 @@ export async function processInboundMessage(
     ethicsConfig,
   );
 
-  // AUTO_DNC — mark contact, close conversation, stop.
+  // AUTO_DNC — mark contact, close conversation, register phone-level
+  // opt-out, stop.
   if (scanResult.disposition === "AUTO_DNC") {
     await admin.from("contacts").update({ dnc: true }).eq("id", contactId);
     await admin
       .from("conversations")
       .update({ status: "closed" })
       .eq("id", conversationId);
+
+    // Phone-level opt-out (TCPA layer beyond contact.dnc). Detect the
+    // specific STOP-style keyword the prospect used so it lands in
+    // sms_opt_outs.trigger_keyword. Idempotent on (firm_id, phone_e164).
+    if (channel === "sms") {
+      const triggerKeyword = detectOptOutKeyword(body) ?? "auto_dnc";
+      await recordOptOut({
+        admin,
+        firmId,
+        phone: fromIdentifier,
+        triggerKeyword,
+        contactId,
+      });
+    }
+
     return {
       firmId,
       conversationId,

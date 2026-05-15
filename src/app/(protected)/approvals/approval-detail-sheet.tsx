@@ -16,7 +16,7 @@ import {
   ACTION_TYPE_BADGE_CLASSES,
 } from "@/lib/approval-labels";
 import { formatRelativeTime } from "@/lib/format";
-import { fetchItemDetail } from "./actions";
+import { fetchItemDetail, type MessageContextThread } from "./actions";
 import { EntityDetailContent } from "./entity-detail-content";
 import { ApprovalActions } from "./approval-actions";
 import type { ApprovalQueueItem } from "@/types/database";
@@ -28,6 +28,7 @@ export function ApprovalDetailSheet() {
 
   const [queueItem, setQueueItem] = useState<ApprovalQueueItem | null>(null);
   const [entity, setEntity] = useState<Record<string, unknown> | null>(null);
+  const [messageContext, setMessageContext] = useState<MessageContextThread | null>(null);
   const [isLoading, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
@@ -35,6 +36,7 @@ export function ApprovalDetailSheet() {
     if (!itemId) {
       setQueueItem(null);
       setEntity(null);
+      setMessageContext(null);
       return;
     }
 
@@ -44,6 +46,7 @@ export function ApprovalDetailSheet() {
         const result = await fetchItemDetail(itemId);
         setQueueItem(result.queueItem);
         setEntity(result.entity);
+        setMessageContext(result.messageContext ?? null);
       } catch (e) {
         setError(e instanceof Error ? e.message : "Failed to load item");
       }
@@ -100,7 +103,11 @@ export function ApprovalDetailSheet() {
 
             {/* Body — scrolls; min-h-0 is critical so flex-1 actually shrinks */}
             <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
-              <EntityDetailContent queueItem={queueItem} entity={entity} />
+              <EntityDetailContent
+                queueItem={queueItem}
+                entity={entity}
+                messageContext={messageContext}
+              />
             </div>
 
             {/* Action buttons — sticky at the bottom of the sheet */}

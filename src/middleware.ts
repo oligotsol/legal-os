@@ -1,7 +1,18 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC_ROUTES = ["/login", "/auth/callback", "/api/health", "/mfa", "/api/webhooks", "/api/inngest"];
+const PUBLIC_ROUTES = [
+  "/login",
+  "/auth/callback",
+  "/api/health",
+  "/mfa",
+  "/api/webhooks",
+  "/api/inngest",
+  // Bearer-token-authed endpoints — bypass the cookie auth wall so external
+  // callers (Lex on OpenClaw, future integrations) can hit them. Each
+  // handler still validates its own Authorization header.
+  "/api/lex/v1",
+];
 const MFA_ROUTE = "/mfa";
 
 export async function middleware(request: NextRequest) {

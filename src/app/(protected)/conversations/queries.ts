@@ -6,6 +6,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 export interface ConversationListItem {
   id: string;
+  leadId: string | null;
   contactName: string;
   contactEmail: string | null;
   contactPhone: string | null;
@@ -141,6 +142,7 @@ export async function fetchConversations(
 
     return {
       id: c.id,
+      leadId: c.lead_id ?? null,
       contactName: contact?.full_name ?? "Unknown Contact",
       contactEmail: contact?.email ?? null,
       contactPhone: contact?.phone ?? null,

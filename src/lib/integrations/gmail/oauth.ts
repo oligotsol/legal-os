@@ -1,7 +1,7 @@
 /**
  * Gmail OAuth 2.0 authorization code flow.
  *
- * Mirrors the Lawcus OAuth helper. We need `access_type=offline` and
+ * Standard OAuth 2.0 authorization-code flow. We need `access_type=offline` and
  * `prompt=consent` on the authorize URL so Google issues a refresh
  * token (otherwise re-consent only returns an access token).
  */

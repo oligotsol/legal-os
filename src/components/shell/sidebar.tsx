@@ -7,6 +7,8 @@ import {
   Kanban,
   MessageSquare,
   FileSignature,
+  PhoneCall,
+  Settings,
 } from "lucide-react";
 import { SidebarLink } from "./sidebar-link";
 import { SidebarToggle } from "./sidebar-toggle";
@@ -26,7 +28,9 @@ const NAV_ITEMS = [
   { href: "/approvals", label: "Approvals", icon: ShieldCheck },
   { href: "/pipeline", label: "Pipeline", icon: Kanban },
   { href: "/conversations", label: "Conversations", icon: MessageSquare },
+  { href: "/power-dialer", label: "Power Dialer", icon: PhoneCall },
   { href: "/engagements", label: "Engagements", icon: FileSignature },
+  { href: "/firm-settings", label: "Firm Settings", icon: Settings },
 ] as const;
 
 export function Sidebar({

@@ -77,9 +77,11 @@ export async function createSignatureRequest(
   formData.append("signers[0][name]", parsedInput.signerName);
   formData.append("test_mode", parsedCreds.testMode ? "1" : "0");
 
-  // Attach document content as a file
-  const blob = new Blob([parsedInput.documentContent], { type: "text/plain" });
-  formData.append("file[0]", blob, `${parsedInput.title}.txt`);
+  // Attach document content as an HTML file. Dropbox Sign converts HTML to PDF
+  // server-side, preserving formatting (headings, tables, page breaks) — which
+  // text/plain cannot.
+  const blob = new Blob([parsedInput.documentContent], { type: "text/html" });
+  formData.append("file[0]", blob, `${parsedInput.title}.html`);
 
   if (parsedCreds.clientId) {
     formData.append("client_id", parsedCreds.clientId);

@@ -56,6 +56,12 @@ export interface ConversationConfig {
     activeStates: string[];
     redirects: Record<string, string>;
   };
+  /** Optional firm-supplied "voice doctrine" — premium attorney-voice prompt
+   *  that sets tone/emotional-intelligence/writing-style ABOVE the
+   *  mechanical closer doctrine. Per CLAUDE.md §6/§7 this lives in
+   *  firm_config.voice_doctrine.content so it ports cleanly to other firms.
+   *  Null/empty means: skip the section. */
+  voiceDoctrine?: string | null;
 }
 
 export interface ConversationContext {
@@ -235,6 +241,18 @@ function buildIntakeCloserDoctrine(
   const states = config.firmScope?.activeStates ?? [];
   const practices = config.firmScope?.activePracticeAreas ?? [];
   const redirects = config.firmScope?.redirects ?? {};
+
+  // VOICE DOCTRINE — premium attorney voice + emotional intelligence layer.
+  // Sits at the very top of the system prompt so it shapes HOW the message
+  // is written before the mechanical closer rules dictate WHAT it says.
+  // Firm-supplied via firm_config.voice_doctrine; falls back to nothing
+  // when unset so other tenants get vertical-generic behavior.
+  if (config.voiceDoctrine && config.voiceDoctrine.trim().length > 0) {
+    sections.push(`## VOICE & CLIENT EXPERIENCE DOCTRINE (HIGHEST PRIORITY)
+This section governs HOW you write. The mechanical sections below govern WHAT you say. When the two conflict, default to compliance (no legal advice, no AC implication) but otherwise let this section shape every word choice, sentence rhythm, and emotional cue.
+
+${config.voiceDoctrine.trim()}`);
+  }
 
   // ROLE LOCK
   sections.push(`## ROLE LOCK (ABSOLUTE)
@@ -458,6 +476,14 @@ Respond with ONLY valid JSON (no markdown, no explanation):
 
   // Legacy path — section-based prompt for non-closer-doctrine firms.
   const sections: string[] = [];
+
+  // Voice doctrine — same prepended-priority treatment as the closer path.
+  if (config.voiceDoctrine && config.voiceDoctrine.trim().length > 0) {
+    sections.push(`## VOICE & CLIENT EXPERIENCE DOCTRINE (HIGHEST PRIORITY)
+This section governs HOW you write. The sections below govern WHAT you say. When the two conflict, default to compliance (no legal advice, no AC implication) but otherwise let this section shape every word choice, sentence rhythm, and emotional cue.
+
+${config.voiceDoctrine.trim()}`);
+  }
 
   // --- Your Role (always) ---
   sections.push(`## Your Role

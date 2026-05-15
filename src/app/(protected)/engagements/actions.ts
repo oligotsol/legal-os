@@ -34,8 +34,11 @@ async function getActorInfo(): Promise<{ userId: string; firmId: string }> {
 }
 
 /**
- * Generate a new engagement letter from a matter + fee quote.
- * Returns the engagement letter ID.
+ * Generate a new engagement letter from a matter + fee quote, and immediately
+ * submit it to the approval queue (mandatory gate per CLAUDE.md §3). Returns
+ * the engagement letter ID so the caller can redirect into the detail view.
+ *
+ * Single-click flow: matter + fee quote -> letter -> pending_approval.
  */
 export async function generateLetter(formData: FormData): Promise<string> {
   const matterId = formData.get("matterId") as string;
@@ -54,8 +57,47 @@ export async function generateLetter(formData: FormData): Promise<string> {
     actorId: userId,
   });
 
+  // Auto-submit for approval. Letters never sit in draft after generate —
+  // the approval queue is the next checkpoint.
+  const { error: updateErr } = await admin
+    .from("engagement_letters")
+    .update({ status: "pending_approval" })
+    .eq("id", result.engagementLetterId)
+    .eq("firm_id", firmId);
+  if (updateErr) {
+    throw new Error(`Failed to set status to pending_approval: ${updateErr.message}`);
+  }
+
+  const { error: queueErr } = await admin.from("approval_queue").insert({
+    firm_id: firmId,
+    entity_type: "engagement_letter",
+    entity_id: result.engagementLetterId,
+    action_type: "engagement_letter",
+    priority: 5,
+    status: "pending",
+    metadata: {
+      matter_id: matterId,
+      fee_quote_id: feeQuoteId,
+    },
+  });
+  if (queueErr) {
+    throw new Error(`Failed to create approval queue entry: ${queueErr.message}`);
+  }
+
+  await admin.rpc("insert_audit_log", {
+    p_firm_id: firmId,
+    p_actor_id: userId,
+    p_action: "engagement_letter.submitted_for_approval",
+    p_entity_type: "engagement_letter",
+    p_entity_id: result.engagementLetterId,
+    p_before: { status: "draft" },
+    p_after: { status: "pending_approval" },
+    p_metadata: null,
+  });
+
   revalidatePath("/engagements");
   revalidatePath("/pipeline");
+  revalidatePath("/approvals");
 
   return result.engagementLetterId;
 }

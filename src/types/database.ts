@@ -126,8 +126,7 @@ export type IntegrationProvider =
   | "gmail"
   | "confido"
   | "dropbox_sign"
-  | "postmark"
-  | "lawcus";
+  | "postmark";
 
 export type WebhookEventStatus =
   | "received"

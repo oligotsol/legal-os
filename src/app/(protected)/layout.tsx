@@ -3,6 +3,8 @@ import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { Sidebar } from "@/components/shell/sidebar";
 import { MobileNav } from "@/components/shell/mobile-nav";
+import { LexContextProvider } from "@/components/lex/lex-context-provider";
+import { LexWidget } from "@/components/lex/lex-widget";
 import type { UserRole } from "@/types/database";
 
 const MFA_REQUIRED_ROLES: UserRole[] = [
@@ -68,25 +70,26 @@ export default async function ProtectedLayout({
     .single();
 
   return (
-    <div className="flex h-screen overflow-hidden">
-      <Sidebar
-        firmName={firmName}
-        userEmail={user.email ?? ""}
-        userFullName={profile?.full_name ?? null}
-        pendingApprovalCount={pendingApprovalCount ?? 0}
-        collapsed={collapsed}
-      />
-      <main className="flex flex-1 flex-col overflow-y-auto">
-        {/* Mobile-only top bar with hamburger; hidden at md+ where the
-            desktop sidebar takes over. */}
-        <MobileNav
+    <LexContextProvider>
+      <div className="flex h-screen overflow-hidden">
+        <Sidebar
           firmName={firmName}
           userEmail={user.email ?? ""}
           userFullName={profile?.full_name ?? null}
           pendingApprovalCount={pendingApprovalCount ?? 0}
+          collapsed={collapsed}
         />
-        {children}
-      </main>
-    </div>
+        <main className="flex flex-1 flex-col overflow-y-auto">
+          <MobileNav
+            firmName={firmName}
+            userEmail={user.email ?? ""}
+            userFullName={profile?.full_name ?? null}
+            pendingApprovalCount={pendingApprovalCount ?? 0}
+          />
+          {children}
+        </main>
+        <LexWidget />
+      </div>
+    </LexContextProvider>
   );
 }
